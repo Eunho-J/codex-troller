@@ -227,10 +227,10 @@ func (c *councilStore) startBriefing(sessionID string, routing AgentRoutingPolic
 		Title  string
 		Detail string
 	}{
-		{"ux_definition", "사용자 경험 정의", fmt.Sprintf("목표: %s", strings.TrimSpace(intent.Goal))},
-		{"architecture_split", "구현 책임 분할", "프론트/백엔드/DB/자산/보안 책임 분할 확정"},
-		{"asset_strategy", "자산 관리 전략", "git + local footprint 기반 재개/추적 전략"},
-		{"security_boundary", "보안/권한 경계", "자동 실행 금지 영역/승인 필수 영역 확정"},
+		{"ux_definition", "User Experience Definition", fmt.Sprintf("Goal: %s", strings.TrimSpace(intent.Goal))},
+		{"architecture_split", "Implementation Responsibility Split", "Lock responsibility boundaries across frontend/backend/db/assets/security"},
+		{"asset_strategy", "Asset Management Strategy", "Define git + local footprint based resume/trace strategy"},
+		{"security_boundary", "Security/Permission Boundary", "Lock no-auto-execution zones and approval-required zones"},
 	}
 	for _, topic := range defaultTopics {
 		if _, err = tx.Exec(
@@ -245,7 +245,7 @@ func (c *councilStore) startBriefing(sessionID string, routing AgentRoutingPolic
 
 	if _, err = tx.Exec(
 		`INSERT INTO council_messages(session_id,topic_id,role,action,content,created_at) VALUES(?,?,?,?,?,?)`,
-		sessionID, 0, "moderator", "kickoff", "병렬 발제 라운드 시작", now,
+		sessionID, 0, "moderator", "kickoff", "Parallel briefing round started", now,
 	); err != nil {
 		return nil, nil, err
 	}
@@ -396,7 +396,7 @@ func (c *councilStore) submitBrief(sessionID, role, priority, contribution, quic
 			`INSERT INTO council_topics(session_id,topic_key,title,detail,status,created_by,created_at,updated_at)
 			 VALUES(?,?,?,?,?,?,?,?)
 			 ON CONFLICT(session_id,topic_key) DO NOTHING`,
-			sessionID, key, title, "팀장 발제로 제안된 안건", "open", role, now, now,
+			sessionID, key, title, "Topic proposed from manager briefing", "open", role, now, now,
 		); err != nil {
 			return err
 		}
@@ -527,7 +527,7 @@ func (c *councilStore) grantFloor(sessionID string, requestID int64) (int64, str
 	}
 	if _, err := c.db.Exec(
 		`INSERT INTO council_messages(session_id,topic_id,role,action,content,created_at) VALUES(?,?,?,?,?,?)`,
-		sessionID, topicID, "moderator", "floor_granted", fmt.Sprintf("%s에게 발언권 부여", role), now,
+		sessionID, topicID, "moderator", "floor_granted", fmt.Sprintf("Floor granted to %s", role), now,
 	); err != nil {
 		return 0, "", err
 	}
@@ -722,7 +722,7 @@ func (c *councilStore) closeTopic(sessionID string, topicID int64) (int, error) 
 	}
 	if _, err := c.db.Exec(
 		`INSERT INTO council_messages(session_id,topic_id,role,action,content,created_at) VALUES(?,?,?,?,?,?)`,
-		sessionID, topicID, "moderator", "topic_closed", "안건 종결", now,
+		sessionID, topicID, "moderator", "topic_closed", "Topic closed", now,
 	); err != nil {
 		return 0, err
 	}
@@ -757,7 +757,7 @@ func (c *councilStore) finalizeConsensus(sessionID string) error {
 	}
 	if _, err := c.db.Exec(
 		`INSERT INTO council_messages(session_id,topic_id,role,action,content,created_at) VALUES(?,?,?,?,?,?)`,
-		sessionID, 0, "moderator", "consensus_finalized", "전체 안건 합의 완료", now,
+		sessionID, 0, "moderator", "consensus_finalized", "Consensus finalized for all topics", now,
 	); err != nil {
 		return err
 	}

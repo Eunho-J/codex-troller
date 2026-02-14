@@ -134,6 +134,7 @@ type SessionState struct {
 	ReconcileNeeded   bool                 `json:"reconcile_needed"`
 	RoutingPolicy     AgentRoutingPolicy   `json:"routing_policy"`
 	UserProfile       UserKnowledgeProfile `json:"user_profile"`
+	ConsultantLang    string               `json:"consultant_lang"`
 	AvailableMCPs     []string             `json:"available_mcps"`
 	AvailableMCPTools []string             `json:"available_mcp_tools"`
 	VisualReview      VisualReviewState    `json:"visual_review"`
@@ -166,6 +167,7 @@ func NewSession() *SessionState {
 			Confidence:      0.2,
 			Evidence:        []string{},
 		},
+		ConsultantLang: "en",
 		VisualReview: VisualReviewState{
 			Status: "not_required",
 		},

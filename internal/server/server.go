@@ -312,6 +312,7 @@ func (s *MCPServer) getOrCreateSession(id string) *SessionState {
 			session.TopicDecisions = map[string]string{}
 		}
 		ensureRoutingPolicyDefaults(session)
+		ensureConsultantLanguageDefaults(session)
 		ensureVisualReviewDefaults(session)
 		return session
 	}
@@ -429,6 +430,7 @@ func (s *MCPServer) loadSessions() error {
 			session.TopicDecisions = map[string]string{}
 		}
 		ensureRoutingPolicyDefaults(session)
+		ensureConsultantLanguageDefaults(session)
 		ensureVisualReviewDefaults(session)
 	}
 	return nil

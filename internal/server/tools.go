@@ -26,7 +26,7 @@ func toolListResponse() map[string]any {
 		"tools": []toolSchema{
 			newTool(
 				"start_interview",
-				"워크플로우 시작점. 사용자 인터뷰 질문을 생성하고 세션을 초기화",
+				"Workflow entrypoint. Initialize session and generate interview questions",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -47,23 +47,23 @@ func toolListResponse() map[string]any {
 						"available_mcps": map[string]any{
 							"type":        "array",
 							"items":       map[string]any{"type": "string"},
-							"description": "현재 사용 가능한 MCP 서버 이름 목록",
+							"description": "List of available MCP server names in current runtime",
 						},
 						"available_mcp_tools": map[string]any{
 							"type":        "array",
 							"items":       map[string]any{"type": "string"},
-							"description": "현재 사용 가능한 MCP 도구명 목록",
+							"description": "List of available MCP tool names in current runtime",
 						},
 					},
 				},
 			),
 			newTool(
 				"ingest_intent",
-				"사용자 요구사항 문장을 수집하고 기본 intent 구조로 정리",
+				"Collect raw user requirement text and normalize into base intent structure",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
-						"raw_intent": map[string]any{"type": "string", "description": "사용자 요청 원문"},
+						"raw_intent": map[string]any{"type": "string", "description": "Raw user request text"},
 						"session_id": map[string]any{"type": "string"},
 						"user_profile": map[string]any{
 							"type": "object",
@@ -80,12 +80,12 @@ func toolListResponse() map[string]any {
 						"available_mcps": map[string]any{
 							"type":        "array",
 							"items":       map[string]any{"type": "string"},
-							"description": "현재 사용 가능한 MCP 서버 이름 목록",
+							"description": "List of available MCP server names in current runtime",
 						},
 						"available_mcp_tools": map[string]any{
 							"type":        "array",
 							"items":       map[string]any{"type": "string"},
-							"description": "현재 사용 가능한 MCP 도구명 목록",
+							"description": "List of available MCP tool names in current runtime",
 						},
 					},
 					"required": []string{"raw_intent"},
@@ -93,14 +93,14 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"clarify_intent",
-				"누락 정보 보완 + 상담가 초안 제시/반영 루프(한 번에 한 질문)",
+				"Fill missing intent fields and run consultant outline loop (one focused question per turn)",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
 						"session_id": map[string]any{"type": "string"},
 						"answers": map[string]any{
 							"type":        "object",
-							"description": "예: goal/scope/constraints/success_criteria + proposal_feedback(자연어 응답) + knowledge_level/response_need/technical_depth/domain_knowledge",
+							"description": "Examples: goal/scope/constraints/success_criteria + proposal_feedback + knowledge_level/response_need/technical_depth/domain_knowledge",
 						},
 					},
 					"required": []string{"session_id"},
@@ -108,7 +108,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"generate_plan",
-				"요구사항 기반으로 실행 계획 생성",
+				"Generate executable plan from clarified requirements",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -119,7 +119,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"generate_mockup",
-				"현재 의도/계획 기반으로 빠른 mockup(텍스트 프로토타입) 생성",
+				"Generate quick mockup (text prototype) from current intent/plan",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -130,7 +130,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"approve_plan",
-				"생성된 계획의 승인/보류 처리",
+				"Approve or reject generated plan",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -140,12 +140,12 @@ func toolListResponse() map[string]any {
 						"requirement_tags": map[string]any{
 							"type":        "array",
 							"items":       map[string]any{"type": "string"},
-							"description": "요구사항 식별 태그(예: auth, tests, performance)",
+							"description": "Requirement tags (e.g., auth, tests, performance)",
 						},
 						"success_criteria": map[string]any{
 							"type":        "array",
 							"items":       map[string]any{"type": "string"},
-							"description": "요구사항 성공 기준(문서의 success_criteria를 반영)",
+							"description": "Requirement success criteria aligned with intent success_criteria",
 						},
 					},
 					"required": []string{"session_id", "approved"},
@@ -153,7 +153,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"reconcile_session_state",
-				"세션 재개 시 저장 상태와 현재 코드 상태(git+footprint)를 비교",
+				"Reconcile persisted session state with current repo state (git + footprint)",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -168,7 +168,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"set_agent_routing_policy",
-				"역할별 모델 라우팅 정책 설정",
+				"Set role-based model routing policy",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -183,7 +183,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"get_agent_routing_policy",
-				"현재 역할별 모델 라우팅 정책 조회",
+				"Get current role-based model routing policy",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -194,7 +194,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"council_start_briefing",
-				"팀장 병렬 발제 라운드 시작",
+				"Start manager council parallel briefing round",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -205,7 +205,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"council_submit_brief",
-				"팀장별 발제 제출(병렬 실행 결과 입력)",
+				"Submit briefing for each manager role (parallel execution result input)",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -224,7 +224,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"council_summarize_briefs",
-				"진행자가 발제 요약/안건 목록 정리",
+				"Moderator summarizes briefings and builds agenda topics",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -235,7 +235,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"council_request_floor",
-				"팀장 발언권 요청(안건 지정 필수)",
+				"Manager requests speaking floor (topic_id required)",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -249,7 +249,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"council_grant_floor",
-				"진행자가 발언권 부여",
+				"Moderator grants speaking floor",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -261,7 +261,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"council_publish_statement",
-				"발언권 부여된 팀장의 발언 게시 및 전파",
+				"Publish floor-granted manager statement and propagate to other roles",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -274,7 +274,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"council_respond_topic",
-				"각 팀장 pass/raise 응답 기록",
+				"Record each manager's pass/raise response per topic",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -289,7 +289,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"council_close_topic",
-				"모든 팀장이 해당 안건 pass 했을 때 안건 종결",
+				"Close topic when all manager roles pass",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -301,7 +301,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"council_finalize_consensus",
-				"모든 안건 종결 후 전체 합의 확정",
+				"Finalize consensus after all topics are closed",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -312,7 +312,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"council_get_status",
-				"토론 상태/안건/메시지 조회",
+				"Get council discussion status/topics/messages",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -324,7 +324,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"validate_workflow_transition",
-				"현재 단계에서 다음 단계 전이 가능성 검증",
+				"Validate whether workflow transition is allowed",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -337,7 +337,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"run_action",
-				"승인된 계획 기반으로 제한된 명령 실행",
+				"Run allowlisted commands from approved plan",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -354,7 +354,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"verify_result",
-				"테스트/검증 실행",
+				"Run verification commands",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -367,12 +367,12 @@ func toolListResponse() map[string]any {
 						"available_mcps": map[string]any{
 							"type":        "array",
 							"items":       map[string]any{"type": "string"},
-							"description": "시각 렌더링 가능 MCP 서버 이름 목록(예: playwright)",
+							"description": "MCP servers that can render visuals (e.g., playwright)",
 						},
 						"available_mcp_tools": map[string]any{
 							"type":        "array",
 							"items":       map[string]any{"type": "string"},
-							"description": "시각 렌더링 가능 MCP 도구명 목록(예: playwright.screenshot)",
+							"description": "MCP tools that can render visuals (e.g., playwright.screenshot)",
 						},
 					},
 					"required": []string{"session_id"},
@@ -380,7 +380,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"visual_review",
-				"Visual Reviewer 검토를 수행하고 UX Director 회의 결과를 기록",
+				"Run Visual Reviewer checks and record UX Director meeting outcome",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -396,20 +396,20 @@ func toolListResponse() map[string]any {
 						"artifacts": map[string]any{
 							"type":        "array",
 							"items":       map[string]any{"type": "string"},
-							"description": "렌더링 결과물 경로/URL 목록(스크린샷, 녹화 등)",
+							"description": "Rendered artifact paths/URLs (screenshots, recordings, etc.)",
 						},
 						"findings": map[string]any{
 							"type":        "array",
 							"items":       map[string]any{"type": "string"},
-							"description": "Visual Reviewer 관찰 결과",
+							"description": "Visual Reviewer findings",
 						},
 						"reviewer_notes": map[string]any{
 							"type":        "string",
-							"description": "시각 품질/동작 검증 메모",
+							"description": "Visual quality/behavior verification notes",
 						},
 						"ux_director_summary": map[string]any{
 							"type":        "string",
-							"description": "제작본 기반 UX Director 회의 요약",
+							"description": "UX Director meeting summary based on built artifact",
 						},
 						"ux_decision": map[string]any{
 							"type": "string",
@@ -417,7 +417,7 @@ func toolListResponse() map[string]any {
 						},
 						"skip_reason": map[string]any{
 							"type":        "string",
-							"description": "렌더링 대상 부재 등으로 시각 검토를 생략할 때 사유",
+							"description": "Reason for skipping visual review (e.g., no render target)",
 						},
 					},
 					"required": []string{"session_id"},
@@ -425,7 +425,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"summarize",
-				"세션의 의도-계획-실행-검증 요약",
+				"Summarize session intent-plan-execution-verification",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -436,7 +436,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"record_user_feedback",
-				"사용자 만족/수정 요청을 기록하고 다음 루프를 결정",
+				"Record user approval/feedback and decide next loop",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -453,7 +453,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"continue_persistent_execution",
-				"실패/수정 요청 이후 다음 반복 단계로 재진입",
+				"Resume persistent execution loop after failure/feedback",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -464,7 +464,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"get_session_status",
-				"세션 상태, 상태 이력, 다음 액션 조회",
+				"Get session status, step history, and next action",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -475,7 +475,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"git_get_state",
-				"Git 상태 조회(브랜치, HEAD, 파일 변경 요약)",
+				"Get git state (branch, HEAD, change summary)",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -485,7 +485,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"git_diff_symbols",
-				"Base/Target 변경 파일을 심볼 단위로 매핑(심볼 추정은 파일 변경 기반)",
+				"Map changed files between base/target to estimated symbols",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -498,7 +498,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"git_commit_with_context",
-				"요구사항 태그를 commit 메시지에 반영해 커밋 생성",
+				"Create commit with requirement tags in commit message",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -516,7 +516,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"git_resolve_conflict",
-				"충돌 해결 모드 가이드 수행",
+				"Guide conflict-resolution modes",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -535,7 +535,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"git_bisect_start",
-				"회귀 구간 bisect 시작",
+				"Start bisect for regression range",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -548,7 +548,7 @@ func toolListResponse() map[string]any {
 			),
 			newTool(
 				"git_recover_state",
-				"로컬 상태 복구(작업 디렉토리/브랜치 기반)",
+				"Recover local state (worktree/branch based)",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -579,11 +579,17 @@ func defaultInterviewQuestions(rawIntent string, session *SessionState) []string
 		ensureUserProfileDefaults(session)
 		if session.UserProfile.Overall == "advanced" || session.UserProfile.TechnicalDepth == "technical" {
 			return []string{
-				"지금 해결하려는 문제를 한 문장으로 말해줘. 가능하면 영향 범위(모듈/서비스)도 같이 알려줘.",
+				consultantText(session,
+					"Describe the problem you want to solve in one sentence. If possible, include the affected module/service.",
+					"지금 해결하려는 문제를 한 문장으로 말해줘. 가능하면 영향 범위(모듈/서비스)도 같이 알려줘.",
+				),
 			}
 		}
 		return []string{
-			"지금 해결하고 싶은 문제를 한 문장으로 말해줘. 아직 구현 방식이나 기술 선택은 몰라도 괜찮아.",
+			consultantText(session,
+				"Describe the problem you want to solve in one sentence. It is okay if you do not know implementation details yet.",
+				"지금 해결하고 싶은 문제를 한 문장으로 말해줘. 아직 구현 방식이나 기술 선택은 몰라도 괜찮아.",
+			),
 		}
 	}
 
@@ -601,7 +607,10 @@ func defaultInterviewQuestions(rawIntent string, session *SessionState) []string
 	}
 	if len(questions) == 0 {
 		return []string{
-			"추가 질문 없이 바로 계획을 생성해도 될까? 안 된다면 꼭 지켜야 할 제약 1가지만 알려줘.",
+			consultantText(session,
+				"Can I generate the plan now without more questions? If not, share one must-keep constraint.",
+				"추가 질문 없이 바로 계획을 생성해도 될까? 안 된다면 꼭 지켜야 할 제약 1가지만 알려줘.",
+			),
 		}
 	}
 	return questions
@@ -632,6 +641,63 @@ func containsAny(text string, keywords ...string) bool {
 		}
 	}
 	return false
+}
+
+func containsHangul(text string) bool {
+	for _, r := range text {
+		if r >= 0xAC00 && r <= 0xD7A3 {
+			return true
+		}
+	}
+	return false
+}
+
+func detectConsultantLanguage(text string) string {
+	if containsHangul(text) {
+		return "ko"
+	}
+	return "en"
+}
+
+func ensureConsultantLanguageDefaults(session *SessionState) {
+	if strings.TrimSpace(session.ConsultantLang) == "" {
+		session.ConsultantLang = "en"
+	}
+}
+
+func updateConsultantLanguage(session *SessionState, inputs ...string) {
+	ensureConsultantLanguageDefaults(session)
+	for _, input := range inputs {
+		v := strings.TrimSpace(input)
+		if v == "" {
+			continue
+		}
+		detected := detectConsultantLanguage(v)
+		if session.ConsultantLang == "ko" && detected == "en" {
+			return
+		}
+		session.ConsultantLang = detected
+		return
+	}
+}
+
+func consultantText(session *SessionState, en, ko string) string {
+	ensureConsultantLanguageDefaults(session)
+	if strings.ToLower(strings.TrimSpace(session.ConsultantLang)) == "ko" {
+		return ko
+	}
+	return en
+}
+
+func answersToText(answers map[string]any) string {
+	if len(answers) == 0 {
+		return ""
+	}
+	lines := make([]string, 0, len(answers))
+	for k, v := range answers {
+		lines = append(lines, fmt.Sprintf("%s: %v", k, v))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func ensureVisualReviewDefaults(session *SessionState) {
@@ -732,7 +798,7 @@ func evaluateVisualReviewState(session *SessionState) {
 	case needed && !rendererAvailable:
 		session.VisualReview.Status = "skipped"
 		if strings.TrimSpace(session.VisualReview.ReviewerNotes) == "" {
-			session.VisualReview.ReviewerNotes = "렌더링 가능한 MCP를 찾지 못해 Visual Reviewer 단계를 생략함"
+			session.VisualReview.ReviewerNotes = "No rendering-capable MCP detected; Visual Reviewer step skipped"
 		}
 	default:
 		session.VisualReview.Status = "not_required"
@@ -1041,6 +1107,7 @@ func (s *MCPServer) toolStartInterview(raw json.RawMessage) (any, error) {
 	}
 
 	session := s.getOrCreateSession(args.SessionID)
+	updateConsultantLanguage(session, args.RawIntent)
 	mergeMCPInventory(session, args.AvailableMCPs, args.AvailableMCPTools)
 	mergeUserProfile(session, args.UserProfile, "start_interview.input")
 	hasExistingContext := args.SessionID != "" && (session.Intent.Raw != "" || session.Plan != nil || len(session.StepHistory) > 1 || session.Step != StepReceived)
@@ -1054,7 +1121,7 @@ func (s *MCPServer) toolStartInterview(raw json.RawMessage) (any, error) {
 		session.ReconcileNeeded = driftLevel == "high"
 		if session.ReconcileNeeded {
 			session.PendingReview = []string{
-				"코드 상태가 많이 바뀌었어. 이전 문맥을 유지할지(`keep_context`) 새로 시작할지(`restart_context`) 결정해줘.",
+				"Code state changed significantly. Choose `keep_context` to continue or `restart_context` to start fresh.",
 			}
 		}
 		session.UpdatedAt = time.Now().UTC()
@@ -1093,7 +1160,9 @@ func (s *MCPServer) toolStartInterview(raw json.RawMessage) (any, error) {
 		session.SetStep(StepIntentCaptured)
 		session.PendingReview = nil
 		if strings.TrimSpace(session.Intent.Goal) == "" {
-			session.PendingReview = []string{"이번 작업의 목적을 한 문장으로 알려줘."}
+			session.PendingReview = []string{
+				consultantText(session, "Tell me the goal of this task in one sentence.", "이번 작업의 목적을 한 문장으로 알려줘."),
+			}
 			questions = append([]string{}, session.PendingReview...)
 			nextStep = "clarify_intent"
 		} else {
@@ -1125,6 +1194,7 @@ func (s *MCPServer) toolStartInterview(raw json.RawMessage) (any, error) {
 		"proposal_history":    session.ProposalHistory,
 		"proposal_accepted":   session.ProposalAccepted,
 		"user_profile":        session.UserProfile,
+		"consultant_lang":     session.ConsultantLang,
 		"available_mcps":      session.AvailableMCPs,
 		"available_mcp_tools": session.AvailableMCPTools,
 		"next_step":           nextStep,
@@ -1144,6 +1214,7 @@ func (s *MCPServer) toolIngestIntent(raw json.RawMessage) (any, error) {
 		return nil, err
 	}
 	session := s.getOrCreateSession(args.SessionID)
+	updateConsultantLanguage(session, args.RawIntent)
 	mergeMCPInventory(session, args.AvailableMCPs, args.AvailableMCPTools)
 	mergeUserProfile(session, args.UserProfile, "ingest_intent.input")
 	resetWorkflowState(session)
@@ -1166,7 +1237,9 @@ func (s *MCPServer) toolIngestIntent(raw json.RawMessage) (any, error) {
 	nextStep := "council_start_briefing"
 	questionTopic := ""
 	if strings.TrimSpace(session.Intent.Goal) == "" {
-		session.PendingReview = []string{"이번 작업의 목적을 한 문장으로 알려줘."}
+		session.PendingReview = []string{
+			consultantText(session, "Tell me the goal of this task in one sentence.", "이번 작업의 목적을 한 문장으로 알려줘."),
+		}
 		nextStep = "clarify_intent"
 		questionTopic = "goal"
 	}
@@ -1185,6 +1258,7 @@ func (s *MCPServer) toolIngestIntent(raw json.RawMessage) (any, error) {
 		"proposal_history":    session.ProposalHistory,
 		"proposal_accepted":   session.ProposalAccepted,
 		"user_profile":        session.UserProfile,
+		"consultant_lang":     session.ConsultantLang,
 		"available_mcps":      session.AvailableMCPs,
 		"available_mcp_tools": session.AvailableMCPTools,
 	}, nil
@@ -1221,7 +1295,7 @@ func resetWorkflowState(session *SessionState) {
 
 func parseIntent(raw string) Intent {
 	lines := strings.Split(raw, "\n")
-	intent := Intent{Goal: strings.TrimSpace(raw), SuccessCriteria: []string{"수동 검증 통과", "테스트 통과"}}
+	intent := Intent{Goal: strings.TrimSpace(raw), SuccessCriteria: []string{"Manual verification passes", "Tests pass"}}
 	explicitCriteria := []string{}
 
 	for _, line := range lines {
@@ -1281,7 +1355,7 @@ func parseIntent(raw string) Intent {
 		intent.Goal = strings.TrimSpace(raw)
 	}
 	if strings.TrimSpace(intent.Goal) != "" {
-		intent.Assumptions = append(intent.Assumptions, "요청은 로컬 환경에서 자동 실행 가능한 범위로 해석")
+		intent.Assumptions = append(intent.Assumptions, "Request is interpreted as executable within local environment scope")
 	}
 	return intent
 }
@@ -1307,6 +1381,7 @@ func (s *MCPServer) toolClarifyIntent(raw json.RawMessage) (any, error) {
 	if session.Step != StepIntentCaptured {
 		return nil, fmt.Errorf("clarify intent requires intent_captured state")
 	}
+	updateConsultantLanguage(session, answersToText(args.Answers))
 
 	for k, v := range args.Answers {
 		session.ClarifyNotes = append(session.ClarifyNotes, fmt.Sprintf("%s: %v", k, v))
@@ -1354,8 +1429,14 @@ func (s *MCPServer) toolClarifyIntent(raw json.RawMessage) (any, error) {
 		if rebriefNeeded {
 			status = "needs_more_info"
 			questionTopic = "council_rebrief"
-			questionReason = "수집된 요구 간 충돌 가능성이 있어 상담가 단독 판단 대신 팀장 council 재토론이 필요함"
-			session.PendingReview = []string{"요구를 더 모아두었고, 이제 팀장 council에서 충돌 해소안/우회안을 먼저 정리할게."}
+			questionReason = "Possible conflicts among gathered requirements; manager council re-briefing is required"
+			session.PendingReview = []string{
+				consultantText(
+					session,
+					"I collected more requirements. I will run a manager council re-brief to resolve conflicts before continuing.",
+					"요구를 더 모아두었고, 이제 팀장 council에서 충돌 해소안/우회안을 먼저 정리할게.",
+				),
+			}
 		}
 	} else if !session.ProposalAccepted {
 		shouldCreateProposal := len(session.ProposalHistory) == 0 ||
@@ -1374,7 +1455,7 @@ func (s *MCPServer) toolClarifyIntent(raw json.RawMessage) (any, error) {
 		status = "needs_more_info"
 		nextStep = "clarify_intent"
 		questionTopic = "proposal_alignment"
-		questionReason = "윤곽을 한 번에 확정하지 않고, 한 질문씩 반영해 구체화해야 함"
+		questionReason = "Do not finalize outline at once; refine with one focused follow-up at a time"
 		var activeProposal *ConsultProposal
 		if len(session.ProposalHistory) > 0 {
 			last := session.ProposalHistory[len(session.ProposalHistory)-1]
@@ -1410,6 +1491,7 @@ func (s *MCPServer) toolClarifyIntent(raw json.RawMessage) (any, error) {
 		"proposal_history":    session.ProposalHistory,
 		"consultant_message":  consultProposalMessage(currentProposal),
 		"user_profile":        session.UserProfile,
+		"consultant_lang":     session.ConsultantLang,
 		"intent":              session.Intent,
 	}, nil
 }
@@ -1436,9 +1518,9 @@ func (s *MCPServer) toolGeneratePlan(raw json.RawMessage) (any, error) {
 	}
 	plan := &Plan{
 		Title:       fmt.Sprintf("Plan for %s", session.Intent.Goal),
-		Steps:       []string{"요구사항 정합성 재확인", "실행 단위 분해", "작업 우선순위 정렬", "검증 포인트 설정", "요약 및 사용자 승인 포인트 확정"},
+		Steps:       []string{"Reconfirm requirement consistency", "Break down into executable units", "Prioritize work items", "Define verification checkpoints", "Finalize summary and approval checkpoints"},
 		Assumptions: append(session.Intent.Assumptions, session.ClarifyNotes...),
-		Risks:       []string{"요구사항 미확정 시 계획 오해 가능성", "의존성 변경으로 인한 부수효과"},
+		Risks:       []string{"Plan drift when requirements are not explicit", "Side effects from dependency changes"},
 	}
 	session.Plan = plan
 	session.SetStep(StepPlanGenerated)
@@ -1469,11 +1551,11 @@ func (s *MCPServer) toolGenerateMockup(raw json.RawMessage) (any, error) {
 	}
 	mockup := &MockupArtifact{
 		Version: version,
-		Summary: fmt.Sprintf("%s에 대한 1차 mockup", strings.TrimSpace(session.Intent.Goal)),
+		Summary: fmt.Sprintf("First mockup for %s", strings.TrimSpace(session.Intent.Goal)),
 		KeyFlows: []string{
-			"입력 의도 -> 인터뷰 보완 -> 계획 수립",
-			"mockup 검토 -> 승인/수정 루프",
-			"승인 후 실행 -> 검증 -> 사용자 최종 승인",
+			"Intent input -> interview refinement -> planning",
+			"Mockup review -> approve/revise loop",
+			"Post-approval execution -> verification -> final user approval",
 		},
 		OpenQuestions: append([]string{}, session.PendingReview...),
 		Assumptions:   append([]string{}, session.Intent.Assumptions...),
@@ -1512,13 +1594,13 @@ func (s *MCPServer) toolApprovePlan(raw json.RawMessage) (any, error) {
 
 		missingTags, missingCriteria := validateApproveInputs(session.Intent, session.RequirementTags, session.ApprovedCriteria)
 		if len(session.RequirementTags) == 0 {
-			missingTags = append(missingTags, "요구사항 태그가 비어 있음")
+			missingTags = append(missingTags, "Requirement tags are empty")
 		}
 		if len(missingCriteria) > 0 {
-			missingCriteria = append(missingCriteria, "요구사항 성공 기준이 일치하지 않음")
+			missingCriteria = append(missingCriteria, "Provided success criteria do not match intent criteria")
 		}
 		if len(missingTags) > 0 || len(missingCriteria) > 0 {
-			session.LastError = "승인 조건 미충족"
+			session.LastError = "Approval requirements not satisfied"
 			session.SetStep(StepFailed)
 			if len(missingTags) > 0 {
 				session.LastError += ": " + strings.Join(missingTags, ", ")
@@ -1537,7 +1619,7 @@ func (s *MCPServer) toolApprovePlan(raw json.RawMessage) (any, error) {
 				"step":             session.Step,
 				"approved":         false,
 				"blocking_reasons": append(missingTags, missingCriteria...),
-				"required_actions": []string{"요구사항 태그를 1개 이상 제공", "요구사항 success_criteria를 재입력"},
+				"required_actions": []string{"Provide at least one requirement tag", "Re-enter requirement success criteria"},
 				"session_requirements": map[string]any{
 					"intent_success_criteria": session.Intent.SuccessCriteria,
 					"approved_criteria":       session.ApprovedCriteria,
@@ -1559,7 +1641,7 @@ func (s *MCPServer) toolApprovePlan(raw json.RawMessage) (any, error) {
 			session.PendingReview = append(session.PendingReview, "mockup feedback: "+args.Notes)
 		}
 		session.SetStep(StepIntentCaptured)
-		session.LastError = "사용자 mockup 피드백 반영 후 재계획 필요"
+		session.LastError = "Re-planning required after mockup feedback"
 	}
 	session.UpdatedAt = time.Now().UTC()
 	nextStep := "run_action"
@@ -1577,9 +1659,8 @@ func (s *MCPServer) toolApprovePlan(raw json.RawMessage) (any, error) {
 
 func validateApproveInputs(intent Intent, tags []string, criteria []string) ([]string, []string) {
 	if len(intent.SuccessCriteria) == 0 || !intent.ExplicitCriteria {
-		// 기본값만 있는 경우는 실행자 확인 용도 질문으로 사용했고
-		// 엄격 심사를 하려면 사용자에게 명시적인 성공 기준이 먼저 들어와야 함.
-		// 그러나 현재 단계에서는 태그 충족만으로 승인 가능하도록 둔다.
+		// If only defaults are present, strict criteria matching is skipped.
+		// Strict checks require explicit user-provided success criteria.
 		return []string{}, []string{}
 	}
 
@@ -1606,13 +1687,13 @@ func validateApproveInputs(intent Intent, tags []string, criteria []string) ([]s
 	var tagIssues []string
 	for _, t := range uniqueNormalizedValues(tags) {
 		if t == "" {
-			tagIssues = append(tagIssues, "비어 있는 요구사항 태그")
+			tagIssues = append(tagIssues, "Empty requirement tag")
 			break
 		}
 	}
 
 	if len(tags) == 0 {
-		tagIssues = append(tagIssues, "요구사항 태그가 없음")
+		tagIssues = append(tagIssues, "No requirement tags provided")
 	}
 
 	return tagIssues, missing
@@ -1728,6 +1809,9 @@ func isNoPreference(value string) bool {
 		"none":           {},
 		"n/a":            {},
 		"na":             {},
+		"auto":           {},
+		"autodecide":     {},
+		"let you decide": {},
 		"무관":             {},
 		"없음":             {},
 		"dont care":      {},
@@ -1791,29 +1875,29 @@ func domainSpecificScopeQuestion(domain string, session *SessionState) string {
 	switch domain {
 	case "frontend":
 		if knowledge == "advanced" {
-			return "우선 수정할 화면 경로와 컴포넌트 단위 한 곳만 지정해줘. (예: /login, AuthForm)"
+			return consultantText(session, "Name one screen path and component to update first (e.g., /login, AuthForm).", "우선 수정할 화면 경로와 컴포넌트 단위 한 곳만 지정해줘. (예: /login, AuthForm)")
 		}
-		return "우선 손댈 화면/플로우 한 곳만 지정해줘. (예: 로그인 화면, 결제 플로우)"
+		return consultantText(session, "Pick one screen/flow to touch first (e.g., login screen, checkout flow).", "우선 손댈 화면/플로우 한 곳만 지정해줘. (예: 로그인 화면, 결제 플로우)")
 	case "backend":
 		if knowledge == "advanced" {
-			return "우선 수정할 API 엔드포인트/서비스 모듈 한 곳만 지정해줘. (예: POST /auth/login, auth service)"
+			return consultantText(session, "Name one API endpoint/service module to update first (e.g., POST /auth/login, auth service).", "우선 수정할 API 엔드포인트/서비스 모듈 한 곳만 지정해줘. (예: POST /auth/login, auth service)")
 		}
-		return "우선 수정할 API/모듈 한 곳만 지정해줘. (예: /auth/login, payment service)"
+		return consultantText(session, "Pick one API/module to update first (e.g., /auth/login, payment service).", "우선 수정할 API/모듈 한 곳만 지정해줘. (예: /auth/login, payment service)")
 	case "game":
 		if knowledge == "advanced" {
-			return "우선 완성할 핵심 루프와 연관 시스템 한 곳만 지정해줘. (예: 전투 루프 + 히트 판정)"
+			return consultantText(session, "Name one core loop and related system to complete first (e.g., combat loop + hit detection).", "우선 완성할 핵심 루프와 연관 시스템 한 곳만 지정해줘. (예: 전투 루프 + 히트 판정)")
 		}
-		return "우선 완성할 게임 루프 구간 1개만 지정해줘. (예: 이동, 전투, 인벤토리)"
+		return consultantText(session, "Pick one game loop segment to complete first (e.g., movement, combat, inventory).", "우선 완성할 게임 루프 구간 1개만 지정해줘. (예: 이동, 전투, 인벤토리)")
 	case "maintenance":
 		if knowledge == "advanced" {
-			return "문제가 재현되는 진입 경로와 책임 모듈 한 곳만 지정해줘. (예: auth/session.go, token refresh path)"
+			return consultantText(session, "Name one failing entry path and responsible module (e.g., auth/session.go, token refresh path).", "문제가 재현되는 진입 경로와 책임 모듈 한 곳만 지정해줘. (예: auth/session.go, token refresh path)")
 		}
-		return "문제가 재현되는 파일/모듈/기능 한 곳만 지정해줘. (예: auth/session.go)"
+		return consultantText(session, "Pick one file/module/function where the issue reproduces (e.g., auth/session.go).", "문제가 재현되는 파일/모듈/기능 한 곳만 지정해줘. (예: auth/session.go)")
 	default:
 		if knowledge == "advanced" {
-			return "우선 손댈 범위를 시스템 경계 기준으로 한 곳만 지정해줘. (예: 인증 경계, 결제 경계)"
+			return consultantText(session, "Define one system boundary to work on first (e.g., auth boundary, payment boundary).", "우선 손댈 범위를 시스템 경계 기준으로 한 곳만 지정해줘. (예: 인증 경계, 결제 경계)")
 		}
-		return "우선 손댈 범위를 큰 단위로 한 곳만 지정해줘. (예: 인증, 결제, 인벤토리, 배포 파이프라인)"
+		return consultantText(session, "Pick one high-level area to work on first (e.g., auth, payment, inventory, deploy pipeline).", "우선 손댈 범위를 큰 단위로 한 곳만 지정해줘. (예: 인증, 결제, 인벤토리, 배포 파이프라인)")
 	}
 }
 
@@ -1822,24 +1906,24 @@ func domainSpecificCriteriaQuestion(domain string, session *SessionState) string
 	switch domain {
 	case "frontend":
 		if knowledge == "advanced" {
-			return "완료 판정 기준을 UX 지표/브레이크포인트 기준으로 1~2개 알려줘. (예: CLS < 0.1, 375px 레이아웃 무결성)"
+			return consultantText(session, "Give 1-2 completion criteria using UX metrics/breakpoints (e.g., CLS < 0.1, layout intact at 375px).", "완료 판정 기준을 UX 지표/브레이크포인트 기준으로 1~2개 알려줘. (예: CLS < 0.1, 375px 레이아웃 무결성)")
 		}
-		return "완료 판정 기준을 사용자 동작 기준으로 1~2개 알려줘. (예: 모바일 375px에서 UI 깨짐 없음)"
+		return consultantText(session, "Give 1-2 completion criteria in user-behavior terms (e.g., no UI break on 375px mobile).", "완료 판정 기준을 사용자 동작 기준으로 1~2개 알려줘. (예: 모바일 375px에서 UI 깨짐 없음)")
 	case "backend":
 		if knowledge == "advanced" {
-			return "완료 판정 기준을 테스트/에러율/지연시간 같은 수치로 1~2개 알려줘. (예: 통합 테스트 통과, p95 300ms 이하)"
+			return consultantText(session, "Give 1-2 completion criteria using measurable metrics (tests/error rate/latency), e.g., integration tests pass, p95 < 300ms.", "완료 판정 기준을 테스트/에러율/지연시간 같은 수치로 1~2개 알려줘. (예: 통합 테스트 통과, p95 300ms 이하)")
 		}
-		return "완료 판정 기준을 테스트/수치 기준으로 1~2개 알려줘. (예: 통합 테스트 통과, p95 300ms 이하)"
+		return consultantText(session, "Give 1-2 completion criteria in test/metric terms (e.g., integration tests pass, p95 < 300ms).", "완료 판정 기준을 테스트/수치 기준으로 1~2개 알려줘. (예: 통합 테스트 통과, p95 300ms 이하)")
 	case "game":
 		if knowledge == "advanced" {
-			return "완료 판정 기준을 루프 안정성/프레임/입력 반응 같은 플레이 지표로 1~2개 알려줘."
+			return consultantText(session, "Give 1-2 completion criteria using gameplay metrics (loop stability/frame/input responsiveness).", "완료 판정 기준을 루프 안정성/프레임/입력 반응 같은 플레이 지표로 1~2개 알려줘.")
 		}
-		return "완료 판정 기준을 플레이 결과 기준으로 1~2개 알려줘. (예: 튜토리얼 3분 내 완료 가능)"
+		return consultantText(session, "Give 1-2 completion criteria in play-outcome terms (e.g., tutorial completable within 3 minutes).", "완료 판정 기준을 플레이 결과 기준으로 1~2개 알려줘. (예: 튜토리얼 3분 내 완료 가능)")
 	default:
 		if knowledge == "advanced" {
-			return "완료됐다고 볼 수 있는 검증 가능한 체크 항목 1~2개를 알려줘."
+			return consultantText(session, "Give 1-2 verifiable checks that define done.", "완료됐다고 볼 수 있는 검증 가능한 체크 항목 1~2개를 알려줘.")
 		}
-		return "완료됐다고 볼 수 있는 체크 항목 1~2개를 알려줘."
+		return consultantText(session, "Give 1-2 checks that define done.", "완료됐다고 볼 수 있는 체크 항목 1~2개를 알려줘.")
 	}
 }
 
@@ -1848,7 +1932,7 @@ func normalizeProposalDecision(raw string) string {
 	if v == "" {
 		return ""
 	}
-	if containsAny(v, "accept", "approved", "ok", "좋", "진행", "승인", "채택") {
+	if containsAny(v, "accept", "approved", "ok", "go as-is", "as-is", "ship it", "좋", "진행", "승인", "채택") {
 		return "accept"
 	}
 	if containsAny(v, "refine", "revise", "수정", "보완", "다듬") {
@@ -1871,7 +1955,7 @@ func inferProposalDecisionFromFeedback(raw string) string {
 	if containsAny(v, "refine", "revise", "수정", "보완", "다듬", "바꿔", "변경", "추가", "제외", "말고", "대신", "조정", "하지만", "근데") {
 		return "refine"
 	}
-	if containsAny(v, "accept", "approved", "ok", "오케이", "이대로", "그대로", "진행", "승인", "좋", "괜찮", "문제없", "맞아") {
+	if containsAny(v, "accept", "approved", "ok", "go as-is", "as-is", "ship it", "오케이", "이대로", "그대로", "진행", "승인", "좋", "괜찮", "문제없", "맞아") {
 		return "accept"
 	}
 	return ""
@@ -1912,7 +1996,7 @@ func shouldRebriefCouncil(proposalDecision, proposalFeedback string, answers map
 		return true
 	}
 	feedback := strings.ToLower(strings.TrimSpace(proposalFeedback))
-	if containsAny(feedback, "모순", "상충", "동시에", "둘 다", "tradeoff", "trade-off", "트레이드오프", "우선순위 충돌", "하지만", "근데") {
+	if containsAny(feedback, "conflict", "contradict", "incompatible", "tradeoff", "trade-off", "both", "at the same time", "priority clash", "모순", "상충", "동시에", "둘 다", "트레이드오프", "우선순위 충돌", "하지만", "근데") {
 		return true
 	}
 	for key, value := range answers {
@@ -1929,18 +2013,18 @@ func shouldRebriefCouncil(proposalDecision, proposalFeedback string, answers map
 	return false
 }
 
-func proposalStrategyByDomain(domain string) string {
+func proposalStrategyByDomain(session *SessionState, domain string) string {
 	switch domain {
 	case "frontend":
-		return "핵심 화면/흐름 1개를 먼저 고정하고, 반응형과 핵심 상호작용을 우선 잠그는 방식으로 갈게."
+		return consultantText(session, "We will lock one core screen/flow first, then stabilize responsive behavior and key interactions.", "핵심 화면/흐름 1개를 먼저 고정하고, 반응형과 핵심 상호작용을 우선 잠그는 방식으로 갈게.")
 	case "backend":
-		return "장애 영향이 큰 API/모듈 1개를 먼저 안정화하고 회귀 테스트를 잠그는 방식으로 갈게."
+		return consultantText(session, "We will stabilize one high-impact API/module first and lock regression tests around it.", "장애 영향이 큰 API/모듈 1개를 먼저 안정화하고 회귀 테스트를 잠그는 방식으로 갈게.")
 	case "maintenance":
-		return "재현 가능한 실패 1개를 먼저 고치고, 같은 유형 재발을 막는 회귀 검증을 같이 넣을게."
+		return consultantText(session, "We will fix one reproducible failure first and add regression checks to prevent recurrence.", "재현 가능한 실패 1개를 먼저 고치고, 같은 유형 재발을 막는 회귀 검증을 같이 넣을게.")
 	case "game":
-		return "플레이어가 즉시 체감하는 핵심 루프 1개를 먼저 완성하고 입력/피드백 감각을 먼저 맞출게."
+		return consultantText(session, "We will complete one player-facing core loop first and tune input/feedback feel early.", "플레이어가 즉시 체감하는 핵심 루프 1개를 먼저 완성하고 입력/피드백 감각을 먼저 맞출게.")
 	default:
-		return "1차 범위를 최소화해서 빠르게 동작 결과를 만들고, 다음 루프에서 확장하는 방식으로 갈게."
+		return consultantText(session, "We will minimize first-pass scope, ship a working result quickly, then expand in the next loop.", "1차 범위를 최소화해서 빠르게 동작 결과를 만들고, 다음 루프에서 확장하는 방식으로 갈게.")
 	}
 }
 
@@ -1948,11 +2032,11 @@ func proposalNarrativeByKnowledge(session *SessionState, domain string) string {
 	knowledge := userKnowledgeForDomain(session, domain)
 	switch knowledge {
 	case "beginner":
-		return "설명은 기능 변화와 사용자 체감 결과 중심으로 유지하고, 구현 세부는 팀장 에이전트가 자율 결정할게."
+		return consultantText(session, "I will keep explanations outcome-focused, and team leads will decide most implementation details autonomously.", "설명은 기능 변화와 사용자 체감 결과 중심으로 유지하고, 구현 세부는 팀장 에이전트가 자율 결정할게.")
 	case "advanced":
-		return "필요하면 구조적 연결 방식과 예상 트레이드오프를 근거와 함께 바로 이어서 설명할게."
+		return consultantText(session, "When needed, I will include structural choices and tradeoffs with concrete rationale.", "필요하면 구조적 연결 방식과 예상 트레이드오프를 근거와 함께 바로 이어서 설명할게.")
 	default:
-		return "핵심 결과를 먼저 확인하고, 필요한 만큼만 세부를 열어가는 방식으로 진행할게."
+		return consultantText(session, "I will confirm core outcomes first and open details only when needed.", "핵심 결과를 먼저 확인하고, 필요한 만큼만 세부를 열어가는 방식으로 진행할게.")
 	}
 }
 
@@ -1961,21 +2045,29 @@ func (s *MCPServer) createConsultProposal(session *SessionState, feedback string
 	version := len(session.ProposalHistory) + 1
 	goal := strings.TrimSpace(session.Intent.Goal)
 	if goal == "" {
-		goal = "현재 요청"
+		goal = consultantText(session, "current request", "현재 요청")
 	}
-	scope := "핵심 경로 1개"
+	scope := consultantText(session, "one core path", "핵심 경로 1개")
 	if len(session.Intent.Scope) > 0 {
 		scope = strings.TrimSpace(session.Intent.Scope[0])
 	}
-	criterion := "기본 완료 기준(빌드/테스트 통과)"
+	criterion := consultantText(session, "default done criteria (build/tests pass)", "기본 완료 기준(빌드/테스트 통과)")
 	if len(session.Intent.SuccessCriteria) > 0 {
 		criterion = strings.TrimSpace(session.Intent.SuccessCriteria[0])
 	}
-	strategy := proposalStrategyByDomain(domain)
+	strategy := proposalStrategyByDomain(session, domain)
 	narrative := proposalNarrativeByKnowledge(session, domain)
-	summary := fmt.Sprintf("윤곽 v%d: `%s` 목표 기준으로 1차 범위를 `%s`에 고정하고 `%s`를 우선 만족시키는 방식으로 진행할게. %s %s", version, goal, scope, criterion, strategy, narrative)
+	summary := consultantText(
+		session,
+		fmt.Sprintf("Outline v%d: For goal `%s`, I will keep first-pass scope to `%s` and prioritize `%s`. %s %s", version, goal, scope, criterion, strategy, narrative),
+		fmt.Sprintf("윤곽 v%d: `%s` 목표 기준으로 1차 범위를 `%s`에 고정하고 `%s`를 우선 만족시키는 방식으로 진행할게. %s %s", version, goal, scope, criterion, strategy, narrative),
+	)
 	if strings.TrimSpace(feedback) != "" {
-		summary = fmt.Sprintf("%s (직전 피드백 반영: %s)", summary, strings.TrimSpace(feedback))
+		summary = consultantText(
+			session,
+			fmt.Sprintf("%s (updated from latest feedback: %s)", summary, strings.TrimSpace(feedback)),
+			fmt.Sprintf("%s (직전 피드백 반영: %s)", summary, strings.TrimSpace(feedback)),
+		)
 	}
 	return ConsultProposal{
 		Version:      version,
@@ -1997,14 +2089,14 @@ func proposalFollowupQuestion(session *SessionState, proposal *ConsultProposal) 
 	knowledge := userKnowledgeForDomain(session, domain)
 	if knowledge == "advanced" {
 		if proposal == nil || proposal.Version <= 1 {
-			return "지금 대화 기반으로 1차 윤곽을 잡았어. 추가로 생각난 요구사항이 있으면 구조/리스크 관점에서 가장 중요한 것 1가지만 말해줘. 더 없으면 `이대로`라고 답해줘. 그러면 이 윤곽 기준으로 목업 준비를 시작할게."
+			return consultantText(session, "I drafted a first outline from this conversation. If you have one additional requirement, share the most important one from a structure/risk perspective. If nothing else, reply `go as-is` and I will prepare the mockup.", "지금 대화 기반으로 1차 윤곽을 잡았어. 추가로 생각난 요구사항이 있으면 구조/리스크 관점에서 가장 중요한 것 1가지만 말해줘. 더 없으면 `이대로`라고 답해줘. 그러면 이 윤곽 기준으로 목업 준비를 시작할게.")
 		}
-		return "피드백 반영해서 윤곽을 업데이트했어. 추가로 생각난 요구사항이 있으면 기술적으로 중요한 것 1가지만 더 말해줘. 더 없으면 `이대로`라고 답해줘. 바로 목업 준비로 넘어갈게."
+		return consultantText(session, "I updated the outline with your feedback. If you have one more requirement, share the most important technical point. If not, reply `go as-is` and I will move to mockup preparation.", "피드백 반영해서 윤곽을 업데이트했어. 추가로 생각난 요구사항이 있으면 기술적으로 중요한 것 1가지만 더 말해줘. 더 없으면 `이대로`라고 답해줘. 바로 목업 준비로 넘어갈게.")
 	}
 	if proposal == nil || proposal.Version <= 1 {
-		return "지금까지 대화로 1차 윤곽을 잡았어. 추가로 생각난 요구사항이 있으면 가장 중요한 것 1가지만 말해줘. 더 없으면 `이대로`라고 답해줘. 그러면 이 윤곽 기준으로 목업 준비를 시작할게."
+		return consultantText(session, "I drafted a first outline from what we discussed. If you have one additional requirement, share the most important one. If nothing else, reply `go as-is` and I will prepare the mockup.", "지금까지 대화로 1차 윤곽을 잡았어. 추가로 생각난 요구사항이 있으면 가장 중요한 것 1가지만 말해줘. 더 없으면 `이대로`라고 답해줘. 그러면 이 윤곽 기준으로 목업 준비를 시작할게.")
 	}
-	return "피드백 반영해서 윤곽을 업데이트했어. 추가로 생각난 요구사항이 있으면 1가지만 더 말해줘. 더 없으면 `이대로`라고 답해줘. 바로 목업 준비로 넘어갈게."
+	return consultantText(session, "I updated the outline with your feedback. If you have one more requirement, share it. If not, reply `go as-is` and I will move to mockup preparation.", "피드백 반영해서 윤곽을 업데이트했어. 추가로 생각난 요구사항이 있으면 1가지만 더 말해줘. 더 없으면 `이대로`라고 답해줘. 바로 목업 준비로 넘어갈게.")
 }
 
 func consultProposalMessage(proposal *ConsultProposal) string {
@@ -2065,21 +2157,21 @@ func buildClarifyDecision(session *SessionState) clarifyDecision {
 
 	if scopeMissing && scopeAutoAllowed {
 		decision.AutoDecidable = append(decision.AutoDecidable, "scope")
-		decision.AutoAssumptions = append(decision.AutoAssumptions, "범위 미지정: 1차 구현은 핵심 경로 1개만 선택")
+		decision.AutoAssumptions = append(decision.AutoAssumptions, "Scope unspecified: first implementation is limited to one core path")
 		if responseNeed == "low" {
-			decision.AutoAssumptions = append(decision.AutoAssumptions, "응답 부담 최소화: 세부 범위는 팀장 에이전트가 내부 분해 후 요약 공유")
+			decision.AutoAssumptions = append(decision.AutoAssumptions, "Lowering response burden: team leads decompose detailed scope internally and share summary")
 		}
 	}
 	if constraintsMissing && constraintsAutoAllowed {
 		decision.AutoDecidable = append(decision.AutoDecidable, "constraints")
-		decision.AutoAssumptions = append(decision.AutoAssumptions, "제약 미지정: 파괴적 변경/외부 권한 작업은 기본 금지")
+		decision.AutoAssumptions = append(decision.AutoAssumptions, "Constraints unspecified: destructive changes/external permission operations are blocked by default")
 	}
 	if criteriaMissing && criteriaAutoAllowed {
 		decision.AutoDecidable = append(decision.AutoDecidable, "success_criteria")
-		decision.AutoAssumptions = append(decision.AutoAssumptions, "완료 기준 미지정: 빌드/테스트 통과를 기본 완료 기준으로 사용")
+		decision.AutoAssumptions = append(decision.AutoAssumptions, "Done criteria unspecified: use build/tests pass as baseline")
 	}
 	if lowConfidence {
-		decision.AutoAssumptions = append(decision.AutoAssumptions, "전문성 추정 신뢰도 낮음: 자동결정 범위를 보수적으로 유지")
+		decision.AutoAssumptions = append(decision.AutoAssumptions, "Low confidence in expertise inference: keep auto-decision scope conservative")
 	}
 
 	if len(decision.MustConfirm) == 0 {
@@ -2094,38 +2186,46 @@ func buildClarifyDecision(session *SessionState) clarifyDecision {
 	switch topic {
 	case "goal":
 		if goalMissing {
-			decision.Question = "이번 작업이 끝났을 때 무엇이 달라져야 하는지 한 문장으로 알려줘."
-			decision.QuestionReason = "목표가 비어 있어 설계 기준을 정할 수 없음"
+			decision.Question = consultantText(session, "In one sentence, what should be different when this task is done?", "이번 작업이 끝났을 때 무엇이 달라져야 하는지 한 문장으로 알려줘.")
+			decision.QuestionReason = "Goal is missing, so design baseline cannot be fixed"
 		} else {
 			if knowledge == "advanced" {
-				decision.Question = fmt.Sprintf("`%s`에서 가장 먼저 줄이고 싶은 리스크/실패를 한 가지로 좁혀줘. 가능하면 원인 가설도 같이 알려줘.", strings.TrimSpace(intent.Goal))
+				decision.Question = consultantText(
+					session,
+					fmt.Sprintf("For `%s`, narrow to one risk/failure you want reduced first. If possible, include a cause hypothesis.", strings.TrimSpace(intent.Goal)),
+					fmt.Sprintf("`%s`에서 가장 먼저 줄이고 싶은 리스크/실패를 한 가지로 좁혀줘. 가능하면 원인 가설도 같이 알려줘.", strings.TrimSpace(intent.Goal)),
+				)
 			} else {
-				decision.Question = fmt.Sprintf("`%s`에서 가장 먼저 해결하고 싶은 불편/실패 한 가지를 구체적으로 알려줘.", strings.TrimSpace(intent.Goal))
+				decision.Question = consultantText(
+					session,
+					fmt.Sprintf("For `%s`, tell me one concrete pain/failure you want solved first.", strings.TrimSpace(intent.Goal)),
+					fmt.Sprintf("`%s`에서 가장 먼저 해결하고 싶은 불편/실패 한 가지를 구체적으로 알려줘.", strings.TrimSpace(intent.Goal)),
+				)
 			}
-			decision.QuestionReason = "목표가 추상적이라 우선순위를 결정하기 어려움"
+			decision.QuestionReason = "Goal is still abstract, so prioritization is ambiguous"
 		}
 	case "scope":
 		decision.Question = domainSpecificScopeQuestion(domain, session)
-		decision.QuestionReason = "범위가 없으면 에이전트가 과도하게 넓게 해석할 위험이 있음"
+		decision.QuestionReason = "Without scope, agents may over-expand interpretation"
 	case "constraints":
 		if highRisk {
 			if knowledge == "advanced" {
-				decision.Question = "이 작업에서 절대 변경하면 안 되는 경계(데이터/권한/배포) 1~2개를 알려줘."
+				decision.Question = consultantText(session, "Tell me 1-2 boundaries that must never be changed in this task (data/permissions/deploy).", "이 작업에서 절대 변경하면 안 되는 경계(데이터/권한/배포) 1~2개를 알려줘.")
 			} else {
-				decision.Question = "이 작업에서 절대 건드리면 안 되는 경계 1~2개를 알려줘. (예: 운영 DB 스키마, 결제/권한 로직)"
+				decision.Question = consultantText(session, "Tell me 1-2 boundaries we must not touch (e.g., prod DB schema, payment/permission logic).", "이 작업에서 절대 건드리면 안 되는 경계 1~2개를 알려줘. (예: 운영 DB 스키마, 결제/권한 로직)")
 			}
-			decision.QuestionReason = "고위험 영역이 포함되어 안전 경계 확정이 필요함"
+			decision.QuestionReason = "High-risk areas are included; safety boundaries must be explicit"
 		} else {
 			if knowledge == "advanced" {
-				decision.Question = "절대 위반하면 안 되는 조건 1~2개를 알려줘. 없다면 자동결정 허용 여부만 알려줘."
+				decision.Question = consultantText(session, "Share 1-2 hard constraints that must not be violated. If none, tell me if auto-decisions are allowed.", "절대 위반하면 안 되는 조건 1~2개를 알려줘. 없다면 자동결정 허용 여부만 알려줘.")
 			} else {
-				decision.Question = "절대 위반하면 안 되는 조건 1~2개를 알려줘. 상관없으면 `constraints: 알아서`라고 답해줘."
+				decision.Question = consultantText(session, "Share 1-2 hard constraints that must not be violated. If none, reply `constraints: auto`.", "절대 위반하면 안 되는 조건 1~2개를 알려줘. 상관없으면 `constraints: 알아서`라고 답해줘.")
 			}
-			decision.QuestionReason = "자동 결정 가능 범위를 확정해야 함"
+			decision.QuestionReason = "Auto-decision boundary must be confirmed"
 		}
 	case "success_criteria":
 		decision.Question = domainSpecificCriteriaQuestion(domain, session)
-		decision.QuestionReason = "완료 판정 기준이 없어 결과 만족도를 평가할 수 없음"
+		decision.QuestionReason = "Done criteria are missing, so outcome satisfaction cannot be evaluated"
 	}
 
 	return decision
@@ -2341,8 +2441,8 @@ func (s *MCPServer) toolValidateTransition(raw json.RawMessage) (any, error) {
 	return map[string]any{
 		"allowed":                allowed,
 		"blocking_reasons":       reason,
-		"required_checks":        []string{"의도 정합성", "승인 여부", "권한 경계"},
-		"suggested_next_actions": []string{"단계 제약을 충족하도록 clarify 혹은 approve를 거치세요"},
+		"required_checks":        []string{"intent consistency", "approval status", "permission boundaries"},
+		"suggested_next_actions": []string{"satisfy stage constraints via clarify or approve"},
 		"next_step":              string(next),
 		"confidence":             0.86,
 	}, nil
@@ -2441,10 +2541,10 @@ func (s *MCPServer) toolVerifyResult(raw json.RawMessage) (any, error) {
 			session.FixLoopCount++
 			session.UserApproved = false
 			session.LastError = res.Error
-			session.PendingReview = append(session.PendingReview, fmt.Sprintf("검증 실패(%s): %s", cmd, res.Error))
+			session.PendingReview = append(session.PendingReview, fmt.Sprintf("Verification failed (%s): %s", cmd, res.Error))
 			if session.FixLoopCount >= session.MaxFixLoops {
 				session.SetStep(StepFailed)
-				session.LastError = fmt.Sprintf("검증 실패가 %d회 누적되어 수동 개입 필요", session.FixLoopCount)
+				session.LastError = fmt.Sprintf("Verification failed %d times; manual intervention required", session.FixLoopCount)
 				session.UpdatedAt = time.Now().UTC()
 				return map[string]any{
 					"session_id":     session.SessionID,
@@ -2452,7 +2552,7 @@ func (s *MCPServer) toolVerifyResult(raw json.RawMessage) (any, error) {
 					"results":        session.VerifyResults,
 					"error":          session.LastError,
 					"persistent_max": session.MaxFixLoops,
-					"required_next":  []string{"요구사항 재확인", "수동 개입 후 continue_persistent_execution"},
+					"required_next":  []string{"reconfirm requirements", "after manual intervention, run continue_persistent_execution"},
 				}, nil
 			}
 			session.SetStep(StepIntentCaptured)
@@ -2473,8 +2573,8 @@ func (s *MCPServer) toolVerifyResult(raw json.RawMessage) (any, error) {
 	evaluateVisualReviewState(session)
 	if visualReviewPending(session) {
 		session.PendingReview = mergeUniqueStrings(session.PendingReview,
-			"Visual Reviewer 단계 필요: 렌더링 결과물을 기준으로 구현 품질을 검토해줘.",
-			"제작본 기반 UX Director 회의 요약(핵심 UX 판단)을 남겨줘.",
+			"Visual Reviewer step required: review implementation quality against rendered artifacts.",
+			"Add UX Director meeting summary based on built artifact.",
 		)
 	}
 	session.UpdatedAt = time.Now().UTC()
@@ -2553,7 +2653,7 @@ func (s *MCPServer) toolVisualReview(raw json.RawMessage) (any, error) {
 			"step":       session.Step,
 			"status":     "needs_visual_evidence",
 			"required": []string{
-				"렌더링 결과물(스크린샷/녹화 등) 또는 Visual Reviewer 관찰 내용을 입력해줘.",
+				"Provide rendered artifacts (screenshot/recording) or Visual Reviewer findings.",
 			},
 			"visual_review": session.VisualReview,
 			"next_step":     "visual_review",
@@ -2565,7 +2665,7 @@ func (s *MCPServer) toolVisualReview(raw json.RawMessage) (any, error) {
 			"step":       session.Step,
 			"status":     "needs_ux_director_meeting",
 			"required": []string{
-				"제작본을 기준으로 UX Director 회의 요약을 입력해줘.",
+				"Provide UX Director meeting summary based on the built artifact.",
 			},
 			"visual_review": session.VisualReview,
 			"next_step":     "visual_review",
@@ -2582,7 +2682,7 @@ func (s *MCPServer) toolVisualReview(raw json.RawMessage) (any, error) {
 	session.VisualReview.UXDecision = uxDecision
 	session.VisualReview.UpdatedAt = time.Now().UTC()
 	if uxDecision == "raise" {
-		session.PendingReview = mergeUniqueStrings(session.PendingReview, "UX Director raise: 제작본 UX 개선 필요")
+		session.PendingReview = mergeUniqueStrings(session.PendingReview, "UX Director raised concerns: UX improvements required on built artifact")
 	}
 	session.UpdatedAt = time.Now().UTC()
 	return map[string]any{
@@ -2639,6 +2739,7 @@ func (s *MCPServer) toolSummarize(raw json.RawMessage) (any, error) {
 		"visual_review":     session.VisualReview,
 		"fix_loop_count":    session.FixLoopCount,
 		"max_fix_loops":     session.MaxFixLoops,
+		"consultant_lang":   session.ConsultantLang,
 	}, nil
 }
 
@@ -2706,11 +2807,11 @@ func (s *MCPServer) toolRecordUserFeedback(raw json.RawMessage) (any, error) {
 	session.FixLoopCount++
 	session.PendingReview = mergeUniqueStrings(session.PendingReview, args.RequiredFixes...)
 	if args.Feedback != "" {
-		session.PendingReview = append(session.PendingReview, "사용자 피드백 반영 필요: "+args.Feedback)
+		session.PendingReview = append(session.PendingReview, "User feedback requires updates: "+args.Feedback)
 	}
 	if session.FixLoopCount >= session.MaxFixLoops {
 		session.SetStep(StepFailed)
-		session.LastError = fmt.Sprintf("사용자 피드백 반영 루프가 %d회 누적되어 수동 결정 필요", session.FixLoopCount)
+		session.LastError = fmt.Sprintf("User-feedback loop reached %d cycles; manual decision required", session.FixLoopCount)
 		session.UpdatedAt = time.Now().UTC()
 		return map[string]any{
 			"session_id":     session.SessionID,
@@ -2753,7 +2854,7 @@ func (s *MCPServer) toolContinuePersistentExecution(raw json.RawMessage) (any, e
 	}
 	if session.FixLoopCount >= session.MaxFixLoops {
 		session.SetStep(StepFailed)
-		session.LastError = fmt.Sprintf("재시도 한도(%d회) 초과", session.MaxFixLoops)
+		session.LastError = fmt.Sprintf("Retry limit exceeded (%d)", session.MaxFixLoops)
 		session.UpdatedAt = time.Now().UTC()
 		return map[string]any{
 			"session_id":     session.SessionID,
@@ -2811,6 +2912,7 @@ func (s *MCPServer) toolGetSessionStatus(raw json.RawMessage) (any, error) {
 		"last_footprint":      session.LastFootprint,
 		"routing_policy":      session.RoutingPolicy,
 		"user_profile":        session.UserProfile,
+		"consultant_lang":     session.ConsultantLang,
 		"available_mcps":      session.AvailableMCPs,
 		"available_mcp_tools": session.AvailableMCPTools,
 		"visual_review":       session.VisualReview,
@@ -2896,7 +2998,7 @@ func (s *MCPServer) toolReconcileSessionState(raw json.RawMessage) (any, error) 
 		session.ReconcileNeeded = driftLevel == "high"
 		if session.ReconcileNeeded {
 			session.PendingReview = []string{
-				"코드 상태 변경이 큼. 이전 작업 문맥을 유지할지(`keep_context`) 새로 시작할지(`restart_context`) 선택해줘.",
+				"Large code-state drift detected. Choose `keep_context` to continue or `restart_context` to start fresh.",
 			}
 		}
 	default:
@@ -2983,16 +3085,16 @@ func councilRoleDomain(role string) string {
 func councilAutonomyPolicy(session *SessionState, role string) (string, string, string) {
 	domain := councilRoleDomain(role)
 	if isLowConfidenceProfile(session) {
-		return "balanced", "balanced", "전문성 추정 신뢰도 낮음: 과도한 자율결정 대신 가정/리스크를 명시하고 상담가 확인 포인트를 먼저 제시"
+		return "balanced", "balanced", "Low confidence in expertise inference: avoid aggressive autonomy, expose assumptions/risks, and surface checkpoints first"
 	}
 	knowledge := userKnowledgeForDomain(session, domain)
 	switch knowledge {
 	case "beginner":
-		return "high", "abstract", "사용자 이해도가 낮은 영역이므로 기술 선택/구현은 팀이 자율 결정하고, 상담가에는 사용자 영향/제약 중심으로 전달"
+		return "high", "abstract", "In low-familiarity domains, team decides implementation choices autonomously and reports impact/constraints at abstract level"
 	case "advanced":
-		return "balanced", "technical", "사용자 이해도가 높은 영역이므로 구조/리스크/대안을 구체 근거와 함께 정리하고 상담가가 세부 확인 가능하게 전달"
+		return "balanced", "technical", "In high-familiarity domains, include concrete architecture/risk/tradeoff rationale for detailed verification"
 	default:
-		return "balanced", "balanced", "핵심 결과를 먼저 정리하고 필요 시에만 세부 기술 쟁점을 확장해 전달"
+		return "balanced", "balanced", "Prioritize core outcomes first, then expand technical details only when needed"
 	}
 }
 
@@ -3032,7 +3134,7 @@ func (s *MCPServer) toolCouncilStartBriefing(raw json.RawMessage) (any, error) {
 			"consult_depth":  consultDepth,
 			"policy_note":    policyNote,
 			"prompt": fmt.Sprintf(
-				"프로젝트 목표: %s\n역할: %s\n자율권: %s\n상담 전달 깊이: %s\n정책: %s\n발제 항목: (1) 최우선 문제 (2) 역할 기여 방식 (3) 빨리 확정 가능한 결정 (4) 추가 안건 제안",
+				"Project goal: %s\nRole: %s\nAutonomy level: %s\nConsult depth: %s\nPolicy: %s\nBriefing items: (1) top priority (2) role contribution (3) quick decisions to lock (4) additional agenda proposals",
 				strings.TrimSpace(session.Intent.Goal), role.Role, autonomy, consultDepth, policyNote,
 			),
 		})
@@ -3375,7 +3477,7 @@ func nextAction(session *SessionState) string {
 		}
 		return "manual_review"
 	default:
-		return "재미팅(요구사항 확인)"
+		return "re-meeting (requirement check)"
 	}
 }
 

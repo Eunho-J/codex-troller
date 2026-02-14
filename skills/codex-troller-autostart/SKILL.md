@@ -20,10 +20,10 @@ Purpose: start a full task lifecycle with interview-first behavior by calling th
    - Questions must be situational and concrete, never abstract policy prompts.
    - Ask like a client meeting for non-technical users (e.g., "when should info panel appear?" not "define approval policy").
 3. Convert user answers into structured intent fields:
-   - `목표: ...`
-   - `범위: ...`
-   - `제약: ...`
-   - `성공기준: ...`
+   - `goal: ...`
+   - `scope: ...`
+   - `constraints: ...`
+   - `success_criteria: ...`
 4. Call workflow tools in order:
    - `ingest_intent`
    - `council_start_briefing`

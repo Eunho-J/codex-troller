@@ -129,6 +129,27 @@ func TestStartInterviewWithIntent(t *testing.T) {
 	}
 }
 
+func TestConsultantLanguageDetection(t *testing.T) {
+	srv := NewMCPServer(Config{StatePath: filepath.Join(t.TempDir(), "state.json")})
+	outKo, err := srv.toolIngestIntent([]byte(`{"session_id":"lang-ko-1","raw_intent":"목표: 로그인 안정화"}`))
+	if err != nil {
+		t.Fatalf("ingest ko failed: %v", err)
+	}
+	ko := outKo.(map[string]any)
+	if ko["consultant_lang"] != "ko" {
+		t.Fatalf("expected consultant_lang ko, got %v", ko["consultant_lang"])
+	}
+
+	outEn, err := srv.toolIngestIntent([]byte(`{"session_id":"lang-en-1","raw_intent":"goal: stabilize login API"}`))
+	if err != nil {
+		t.Fatalf("ingest en failed: %v", err)
+	}
+	en := outEn.(map[string]any)
+	if en["consultant_lang"] != "en" {
+		t.Fatalf("expected consultant_lang en, got %v", en["consultant_lang"])
+	}
+}
+
 func TestStartInterviewAppliesUserProfile(t *testing.T) {
 	srv := NewMCPServer(Config{StatePath: filepath.Join(t.TempDir(), "state.json")})
 	out, err := srv.toolStartInterview([]byte(`{"session_id":"iv-profile-1","raw_intent":"목표: API 안정화\n성공기준: 테스트 통과","user_profile":{"overall":"advanced","response_need":"high","technical_depth":"technical","domain_knowledge":{"backend":"advanced"}}}`))
@@ -439,7 +460,7 @@ func TestCouncilLowConfidenceUsesConservativePolicy(t *testing.T) {
 			continue
 		}
 		note, _ := p["policy_note"].(string)
-		if strings.Contains(note, "신뢰도 낮음") {
+		if strings.Contains(strings.ToLower(note), "low confidence") {
 			found = true
 			break
 		}

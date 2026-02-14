@@ -126,8 +126,8 @@ for topic_id in "${TOPIC_IDS[@]}"; do
 done
 
 tool_call "council_finalize_consensus" "$(jq -cn --arg sid "$SESSION_ID" '{session_id:$sid}')"
-tool_call "clarify_intent" "$(jq -cn --arg sid "$SESSION_ID" --argjson tags "$TAGS_JSON" --arg criteria "$SMOKE_CRITERIA" '{session_id:$sid,answers:{goal:"로그인 실패율을 낮춰 재발 장애를 막는다",scope:"internal/server",constraints:"로컬 환경만, 파괴적 변경 금지",requirement_tags:$tags,success_criteria:[$criteria]}}')"
-tool_call "clarify_intent" "$(jq -cn --arg sid "$SESSION_ID" '{session_id:$sid,answers:{proposal_feedback:"이대로 진행해"}}')"
+tool_call "clarify_intent" "$(jq -cn --arg sid "$SESSION_ID" --argjson tags "$TAGS_JSON" --arg criteria "$SMOKE_CRITERIA" '{session_id:$sid,answers:{goal:"Reduce login failure rate and prevent recurrence",scope:"internal/server",constraints:"local environment only, no destructive changes",requirement_tags:$tags,success_criteria:[$criteria]}}')"
+tool_call "clarify_intent" "$(jq -cn --arg sid "$SESSION_ID" '{session_id:$sid,answers:{proposal_feedback:"go as-is"}}')"
 tool_call "generate_plan" "$(jq -cn --arg sid "$SESSION_ID" '{session_id:$sid}')"
 tool_call "generate_mockup" "$(jq -cn --arg sid "$SESSION_ID" '{session_id:$sid}')"
 tool_call "approve_plan" "$(jq -cn --arg sid "$SESSION_ID" --argjson tags "$TAGS_JSON" --arg criteria "$SMOKE_CRITERIA" '{session_id:$sid,approved:true,requirement_tags:$tags,success_criteria:[$criteria]}')"

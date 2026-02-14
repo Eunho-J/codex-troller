@@ -13,7 +13,10 @@ This document defines the installation flow for a "just install it for me" reque
 `scripts/install-agent.sh` runs an interview-style installer with these gates:
 
 1. LLM consent gate
-   - User must agree to terms before any build/config change.
+   - User must explicitly confirm all three terms before any build/config change:
+     - software is not sufficiently validated
+     - user assumes responsibility for issues/damages
+     - license acknowledged as GNU GPL v3.0
    - If not accepted, installation stops immediately.
 2. Install scope selection
    - `global` or `local`.

@@ -10,6 +10,7 @@ NON_INTERACTIVE="${AGENT_INSTALL_NON_INTERACTIVE:-0}"
 INSTALL_SCOPE="${INSTALL_SCOPE:-}"
 PLAYWRIGHT_CONSENT="${INSTALL_PLAYWRIGHT_MCP:-}"
 TERMS_CONSENT="${INSTALL_TERMS_AGREED:-}"
+TERMS_VERSION="2026-02-14"
 
 PROFILE_OVERALL="${INSTALL_PROFILE_OVERALL:-}"
 PROFILE_RESPONSE_NEED="${INSTALL_PROFILE_RESPONSE_NEED:-}"
@@ -22,43 +23,43 @@ lower() {
 
 normalize_yes_no() {
   case "$(lower "$(echo "$1" | xargs)")" in
-    y|yes|agree|agreed|동의|예) echo "yes" ;;
-    n|no|disagree|미동의|아니오) echo "no" ;;
+    y|yes|agree|agreed) echo "yes" ;;
+    n|no|disagree) echo "no" ;;
     *) echo "" ;;
   esac
 }
 
 normalize_install_scope() {
   case "$(lower "$(echo "$1" | xargs)")" in
-    global|g|1|전역) echo "global" ;;
-    local|l|2|로컬) echo "local" ;;
+    global|g|1) echo "global" ;;
+    local|l|2) echo "local" ;;
     *) echo "" ;;
   esac
 }
 
 normalize_level() {
   case "$(lower "$(echo "$1" | xargs)")" in
-    beginner|novice|1|초급) echo "beginner" ;;
-    intermediate|mid|2|중급) echo "intermediate" ;;
-    advanced|expert|3|고급) echo "advanced" ;;
+    beginner|novice|1) echo "beginner" ;;
+    intermediate|mid|2) echo "intermediate" ;;
+    advanced|expert|3) echo "advanced" ;;
     *) echo "" ;;
   esac
 }
 
 normalize_response_need() {
   case "$(lower "$(echo "$1" | xargs)")" in
-    low|light|1|적게) echo "low" ;;
-    balanced|normal|2|보통) echo "balanced" ;;
-    high|detailed|3|많이) echo "high" ;;
+    low|light|1) echo "low" ;;
+    balanced|normal|2) echo "balanced" ;;
+    high|detailed|3) echo "high" ;;
     *) echo "" ;;
   esac
 }
 
 normalize_technical_depth() {
   case "$(lower "$(echo "$1" | xargs)")" in
-    abstract|high-level|1|추상) echo "abstract" ;;
-    balanced|normal|2|중간) echo "balanced" ;;
-    technical|deep|3|기술) echo "technical" ;;
+    abstract|high-level|1) echo "abstract" ;;
+    balanced|normal|2) echo "balanced" ;;
+    technical|deep|3) echo "technical" ;;
     *) echo "" ;;
   esac
 }
@@ -142,11 +143,12 @@ echo "[agent-install] root: $ROOT_DIR"
 if [[ "$NON_INTERACTIVE" != "1" ]]; then
   cat <<'EOF'
 [agent-install] LLM installer consent gate
-This installer will run build/test/smoke, install Codex MCP config, install skills,
-and optionally add Playwright MCP wiring. It also records your initial expertise profile.
-No destructive git reset/checkout will be executed.
+Please review and confirm all items below:
+1) This repository software is not sufficiently validated.
+2) You accept full responsibility for any issues/damages caused by use.
+3) You acknowledge the project license is GNU GPL v3.0.
 EOF
-  TERMS_CONSENT="$(prompt_yes_no "Do you agree to these terms? [yes/no] (default: no):" "no")"
+  TERMS_CONSENT="$(prompt_yes_no "Do you confirm all 3 items above? [yes/no] (default: no):" "no")"
 else
   TERMS_CONSENT="$(normalize_yes_no "$TERMS_CONSENT")"
 fi
@@ -341,6 +343,11 @@ CONSENT_LOG="$CODEX_HOME_PATH/codex-troller/install-consent.log"
 mkdir -p "$(dirname "$CONSENT_LOG")"
 {
   echo "timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  echo "terms_version: $TERMS_VERSION"
+  echo "terms_assertions:"
+  echo "  - unverified_software=true"
+  echo "  - user_assumes_responsibility=true"
+  echo "  - license_gnu_gpl_v3_ack=true"
   echo "scope: $INSTALL_SCOPE"
   echo "terms_accepted: $TERMS_CONSENT"
   echo "playwright_mcp: $PLAYWRIGHT_CONSENT"

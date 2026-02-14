@@ -216,6 +216,7 @@ PROFILE_PATH="$STATE_DIR/default_user_profile.json"
 CACHE_DIR="$STATE_DIR/cache"
 NPM_CACHE_DIR="$DEPS_DIR/npm-cache"
 PLAYWRIGHT_BROWSERS_DIR="$DEPS_DIR/playwright-browsers"
+PLAYWRIGHT_RUNTIME_DIR="$DEPS_DIR/playwright-runtime"
 ```
 
 3. Create temp fetch directory
@@ -400,40 +401,41 @@ printf '\n[mcp_servers.codex-troller]\ncommand = "%s"\n' "$MCP_BIN_PATH" >> "$CO
 13. If Playwright selected: register MCP + install dependencies command-by-command
 ```bash
 awk -v sec='[mcp_servers.playwright]' 'BEGIN{skip=0} $0==sec{skip=1;next} skip&&$0~/^\[/{skip=0} !skip{print}' "$CONFIG_PATH" > "$CONFIG_PATH.tmp" && mv "$CONFIG_PATH.tmp" "$CONFIG_PATH"
+
+mkdir -p "$PLAYWRIGHT_RUNTIME_DIR"
+cd "$PLAYWRIGHT_RUNTIME_DIR"
+if [ ! -f package.json ]; then
+  PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" "$NPM_BIN" init -y
+fi
+
+# Install Playwright runtime and Playwright MCP in the same fixed local path.
+PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" "$NPM_BIN" install --no-audit --no-fund --save-dev playwright@latest @playwright/mcp@latest
+
 cat > "$BIN_DIR/playwright-mcp-launch" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 export npm_config_cache="$NPM_CACHE_DIR"
 export XDG_CACHE_HOME="$CACHE_DIR"
 export PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR"
-exec "$NPX_BIN" -y @playwright/mcp@latest --browser firefox --headless --no-sandbox
+cd "$PLAYWRIGHT_RUNTIME_DIR"
+exec "$PLAYWRIGHT_RUNTIME_DIR/node_modules/.bin/playwright-mcp" --browser firefox --headless --no-sandbox
 EOF
 chmod +x "$BIN_DIR/playwright-mcp-launch"
 printf '\n[mcp_servers.playwright]\ncommand = "%s"\n' "$BIN_DIR/playwright-mcp-launch" >> "$CONFIG_PATH"
 ```
 - Install Playwright browser binaries first:
 ```bash
-PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y playwright@latest install firefox
+PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NODE_BIN" "$PLAYWRIGHT_RUNTIME_DIR/node_modules/playwright/cli.js" install firefox
 ```
-- Optional diagnostics (recommended when the user wants immediate browser-run validation in this environment):
+- Runtime diagnostics (recommended):
 ```bash
-PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y -p playwright node -e "const { firefox } = require('playwright'); (async()=>{ const b=await firefox.launch({headless:true}); await b.close(); })();"
-```
-- If that fails due module-resolution issues in this environment, use deterministic local verify fallback:
-```bash
-PLAYWRIGHT_VERIFY_DIR="$STATE_DIR/playwright-verify"
-mkdir -p "$PLAYWRIGHT_VERIFY_DIR"
-cd "$PLAYWRIGHT_VERIFY_DIR"
-if [ ! -f package.json ]; then
-  PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" "$NPM_BIN" init -y
-fi
-PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPM_BIN" install --no-audit --no-fund --save-dev playwright@latest
-PATH="$NODE_BIN_DIR:$PATH" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NODE_BIN" -e "const { firefox } = require('playwright'); (async()=>{ const b=await firefox.launch({headless:true}); await b.close(); })();"
+cd "$PLAYWRIGHT_RUNTIME_DIR"
+PATH="$NODE_BIN_DIR:$PATH" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NODE_BIN" -e "const { firefox } = require('playwright'); (async()=>{ const budgetMs=90000; const timer=setTimeout(()=>{ console.error('playwright_verify_timeout'); process.exit(124); }, budgetMs); try { const b=await firefox.launch({headless:true}); await b.close(); clearTimeout(timer); console.log('playwright_verify_ok'); } catch (e) { clearTimeout(timer); throw e; } })();"
 ```
 - If diagnostics report missing Linux shared libraries, ask user to run apt commands directly (do not run `sudo apt*` automatically):
 ```bash
 sudo apt-get update
-sudo env "PATH=$NODE_BIN_DIR:$PATH" "$NPX_BIN" -y playwright@latest install-deps firefox
+sudo env "PATH=$NODE_BIN_DIR:$PATH" "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_DIR" "$NODE_BIN" "$PLAYWRIGHT_RUNTIME_DIR/node_modules/playwright/cli.js" install-deps firefox
 ```
 - After user confirms apt step is done, rerun diagnostics.
 - If diagnostics still fail, continue installation with a warning note:
@@ -474,6 +476,8 @@ echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | "$MCP_BIN_PATH"
 MCP_LIST_OUTPUT="$(CODEX_HOME="$CODEX_HOME" codex mcp list)"
 echo "$MCP_LIST_OUTPUT" | grep -Eq '^codex-troller[[:space:]]'
 if [ "$PLAYWRIGHT_MCP_VALUE" = "yes" ]; then
+  test -d "$PLAYWRIGHT_RUNTIME_DIR/node_modules/playwright"
+  test -d "$PLAYWRIGHT_RUNTIME_DIR/node_modules/@playwright/mcp"
   echo "$MCP_LIST_OUTPUT" | grep -Eq '^playwright[[:space:]]'
 fi
 ```
@@ -489,6 +493,8 @@ rm -rf "$FETCH_DIR"
 - `<CODEX_HOME>/.codex-troller/deps/node/bin/npx` exists
 - `<CODEX_HOME>/.codex-troller/default_user_profile.json` includes `consultant_lang`
 - If Playwright selected: `<CODEX_HOME>/.codex-troller/deps/playwright-browsers` has browser files
+- If Playwright selected: `<CODEX_HOME>/.codex-troller/deps/playwright-runtime/node_modules/playwright` exists
+- If Playwright selected: `<CODEX_HOME>/.codex-troller/deps/playwright-runtime/node_modules/@playwright/mcp` exists
 - `<CODEX_HOME>/.codex-troller/bin/codex-mcp` exists
 - Codex config has `[mcp_servers.codex-troller]`
 - If requested, config also has `[mcp_servers.playwright]`

@@ -25,6 +25,18 @@ Its purpose is to increase reliability by turning ambiguous user intent into a s
 - verification + user approval,
 - persistent resumability.
 
+Mode routing is split into two installed skills:
+- `codex-troller-mode-router`: always checks `on/off` mode before routing work.
+- `codex-troller-autostart`: runs the codex-troller workflow when mode is `on`.
+
+## Mode Routing Policy (mandatory)
+
+- Install both skills (`mode-router` + `autostart`).
+- The first `start_interview` call turns workflow mode `on` for the current MCP process.
+- While mode is `on`, continue codex-troller pipeline for task requests.
+- Turn mode `off` only on explicit user request (`... off`, `disable`, `stop`).
+- Mode state is process-scoped and resets to `off` when MCP process/session restarts.
+
 ## Required User Confirmations (must ask before install)
 
 Before running any install command, ask the user and wait for explicit answers.
@@ -313,6 +325,8 @@ PATH="$NODE_BIN_DIR:$PATH" "$NPX_BIN" --version
 
 9. Install skill files from fetched source
 ```bash
+rm -rf "$CODEX_HOME/skills/codex-troller-mode-router"
+cp -R "$SRC_DIR/skills/codex-troller-mode-router" "$CODEX_HOME/skills/codex-troller-mode-router"
 rm -rf "$CODEX_HOME/skills/codex-troller-autostart"
 cp -R "$SRC_DIR/skills/codex-troller-autostart" "$CODEX_HOME/skills/codex-troller-autostart"
 ```
@@ -410,6 +424,7 @@ test -x "$NODE_BIN"
 test -x "$NPM_BIN"
 test -x "$NPX_BIN"
 test -x "$MCP_BIN_PATH"
+test -f "$CODEX_HOME/skills/codex-troller-mode-router/SKILL.md"
 test -f "$CODEX_HOME/skills/codex-troller-autostart/SKILL.md"
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | "$MCP_BIN_PATH"
 echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | "$MCP_BIN_PATH"
@@ -434,6 +449,7 @@ rm -rf "$FETCH_DIR"
 - `<CODEX_HOME>/.codex-troller/bin/codex-mcp` exists
 - Codex config has `[mcp_servers.codex-troller]`
 - If requested, config also has `[mcp_servers.playwright]`
+- Skill exists at `<CODEX_HOME>/skills/codex-troller-mode-router/SKILL.md`
 - Skill exists at `<CODEX_HOME>/skills/codex-troller-autostart/SKILL.md`
 - `initialize` and `tools/list` JSON-RPC calls succeed via `<CODEX_HOME>/.codex-troller/bin/codex-mcp`
 - `CODEX_HOME="<target>" codex mcp list` includes `codex-troller` (and `playwright` when selected)

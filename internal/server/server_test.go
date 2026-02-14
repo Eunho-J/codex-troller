@@ -1317,6 +1317,97 @@ func TestGetSessionStatus(t *testing.T) {
 	}
 }
 
+func TestAutostartModeDefaultAndToggle(t *testing.T) {
+	srv := NewMCPServer(Config{StatePath: filepath.Join(t.TempDir(), "state.json")})
+
+	getOut, err := srv.toolAutostartGetMode(nil)
+	if err != nil {
+		t.Fatalf("autostart_get_mode failed: %v", err)
+	}
+	getResult := getOut.(map[string]any)
+	if getResult["mode"] != "off" {
+		t.Fatalf("expected default mode off, got %v", getResult["mode"])
+	}
+
+	setOnOut, err := srv.toolAutostartSetMode([]byte(`{"mode":"on","session_id":"auto-1","reason":"skill called"}`))
+	if err != nil {
+		t.Fatalf("autostart_set_mode on failed: %v", err)
+	}
+	setOn := setOnOut.(map[string]any)
+	if setOn["mode"] != "on" {
+		t.Fatalf("expected mode on, got %v", setOn["mode"])
+	}
+	if setOn["active_session_id"] != "auto-1" {
+		t.Fatalf("expected active_session_id auto-1, got %v", setOn["active_session_id"])
+	}
+
+	setOffOut, err := srv.toolAutostartSetMode([]byte(`{"mode":"off","reason":"user requested off"}`))
+	if err != nil {
+		t.Fatalf("autostart_set_mode off failed: %v", err)
+	}
+	setOff := setOffOut.(map[string]any)
+	if setOff["mode"] != "off" {
+		t.Fatalf("expected mode off, got %v", setOff["mode"])
+	}
+	if setOff["active_session_id"] != "" {
+		t.Fatalf("expected empty active_session_id after off, got %v", setOff["active_session_id"])
+	}
+}
+
+func TestStartInterviewTurnsAutostartOn(t *testing.T) {
+	srv := NewMCPServer(Config{StatePath: filepath.Join(t.TempDir(), "state.json")})
+
+	out, err := srv.toolStartInterview([]byte(`{"raw_intent":"목표: 테스트 설치 플로우를 안정적으로 정리한다."}`))
+	if err != nil {
+		t.Fatalf("start_interview failed: %v", err)
+	}
+	result := out.(map[string]any)
+	sessionID, _ := result["session_id"].(string)
+	if strings.TrimSpace(sessionID) == "" {
+		t.Fatalf("expected session_id from start_interview")
+	}
+	if result["autostart_mode"] != "on" {
+		t.Fatalf("expected response autostart_mode on, got %v", result["autostart_mode"])
+	}
+	if result["autostart_session_id"] != sessionID {
+		t.Fatalf("expected response autostart_session_id %s, got %v", sessionID, result["autostart_session_id"])
+	}
+
+	modeOut, err := srv.toolAutostartGetMode(nil)
+	if err != nil {
+		t.Fatalf("autostart_get_mode failed: %v", err)
+	}
+	mode := modeOut.(map[string]any)
+	if mode["mode"] != "on" {
+		t.Fatalf("expected mode on after start_interview, got %v", mode["mode"])
+	}
+	if mode["active_session_id"] != sessionID {
+		t.Fatalf("expected active_session_id %s, got %v", sessionID, mode["active_session_id"])
+	}
+}
+
+func TestGetSessionStatusIncludesAutostartState(t *testing.T) {
+	srv := NewMCPServer(Config{StatePath: filepath.Join(t.TempDir(), "state.json")})
+	if _, err := srv.toolAutostartSetMode([]byte(`{"mode":"on","session_id":"status-auto-1"}`)); err != nil {
+		t.Fatalf("set mode on failed: %v", err)
+	}
+	session := srv.getOrCreateSession("status-auto-1")
+	session.Intent.Goal = "status goal"
+	session.SetStep(StepIntentCaptured)
+
+	out, err := srv.toolGetSessionStatus([]byte(`{"session_id":"status-auto-1"}`))
+	if err != nil {
+		t.Fatalf("status failed: %v", err)
+	}
+	status := out.(map[string]any)
+	if status["autostart_mode"] != "on" {
+		t.Fatalf("expected autostart_mode on, got %v", status["autostart_mode"])
+	}
+	if status["autostart_session_id"] != "status-auto-1" {
+		t.Fatalf("expected autostart_session_id status-auto-1, got %v", status["autostart_session_id"])
+	}
+}
+
 func TestSessionPersistenceAndReload(t *testing.T) {
 	dir := t.TempDir()
 	statePath := filepath.Join(dir, "state.json")
@@ -1427,6 +1518,8 @@ func TestToolsListResponseContainsCoreTools(t *testing.T) {
 		"record_user_feedback":          false,
 		"continue_persistent_execution": false,
 		"get_session_status":            false,
+		"autostart_set_mode":            false,
+		"autostart_get_mode":            false,
 		"git_get_state":                 false,
 		"git_diff_symbols":              false,
 		"git_commit_with_context":       false,

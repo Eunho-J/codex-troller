@@ -32,6 +32,8 @@ type MCPServer struct {
 	logger             *slog.Logger
 	defaultUserProfile userProfileInput
 	hasDefaultProfile  bool
+	autostartMode      string
+	autostartSessionID string
 }
 
 func NewMCPServer(cfg Config) *MCPServer {
@@ -46,6 +48,8 @@ func NewMCPServer(cfg Config) *MCPServer {
 		cfg:      cfg,
 		sessions: map[string]*SessionState{},
 		logger:   logger,
+		// Session-scoped skill mode: reset to off when MCP process restarts.
+		autostartMode: "off",
 	}
 	if srv.cfg.WorkDir == "" {
 		srv.cfg.WorkDir = "."
@@ -394,6 +398,10 @@ func (s *MCPServer) handleTool(call toolCallRequest) (any, error) {
 		return s.toolContinuePersistentExecution(call.Arguments)
 	case "get_session_status":
 		return s.toolGetSessionStatus(call.Arguments)
+	case "autostart_set_mode":
+		return s.toolAutostartSetMode(call.Arguments)
+	case "autostart_get_mode":
+		return s.toolAutostartGetMode(call.Arguments)
 	case "git_get_state":
 		return s.toolGitGetState(call.Arguments)
 	case "git_diff_symbols":

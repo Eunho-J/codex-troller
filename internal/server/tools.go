@@ -528,6 +528,27 @@ func toolListResponse() map[string]any {
 				},
 			),
 			newTool(
+				"autostart_set_mode",
+				"Set codex-troller autostart skill mode (on/off) for current MCP process",
+				map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"mode":       map[string]any{"type": "string", "enum": []string{"on", "off"}},
+						"session_id": map[string]any{"type": "string"},
+						"reason":     map[string]any{"type": "string"},
+					},
+					"required": []string{"mode"},
+				},
+			),
+			newTool(
+				"autostart_get_mode",
+				"Get codex-troller autostart skill mode for current MCP process",
+				map[string]any{
+					"type":       "object",
+					"properties": map[string]any{},
+				},
+			),
+			newTool(
 				"git_get_state",
 				"Get git state (branch, HEAD, change summary)",
 				map[string]any{
@@ -1413,6 +1434,7 @@ func (s *MCPServer) toolStartInterview(raw json.RawMessage) (any, error) {
 	}
 
 	session := s.getOrCreateSession(args.SessionID)
+	mode, activeSessionID := s.setAutostartState("on", session.SessionID)
 	if isEmptyUserProfileInput(args.UserProfile) {
 		s.applyDefaultUserProfile(session, "start_interview.default_profile")
 	}
@@ -1435,20 +1457,22 @@ func (s *MCPServer) toolStartInterview(raw json.RawMessage) (any, error) {
 		}
 		session.UpdatedAt = time.Now().UTC()
 		return map[string]any{
-			"session_id":          session.SessionID,
-			"step":                session.Step,
-			"entrypoint":          "resume_interview",
-			"resume":              true,
-			"next_step":           nextAction(session),
-			"pending_review":      session.PendingReview,
-			"user_profile":        session.UserProfile,
-			"available_mcps":      session.AvailableMCPs,
-			"available_mcp_tools": session.AvailableMCPTools,
-			"visual_review":       session.VisualReview,
-			"drift_level":         driftLevel,
-			"drift_reason":        driftReason,
-			"baseline_footprint":  session.BaselineFootprint,
-			"current_footprint":   current,
+			"session_id":           session.SessionID,
+			"step":                 session.Step,
+			"entrypoint":           "resume_interview",
+			"resume":               true,
+			"next_step":            nextAction(session),
+			"pending_review":       session.PendingReview,
+			"user_profile":         session.UserProfile,
+			"available_mcps":       session.AvailableMCPs,
+			"available_mcp_tools":  session.AvailableMCPTools,
+			"visual_review":        session.VisualReview,
+			"autostart_mode":       mode,
+			"autostart_session_id": activeSessionID,
+			"drift_level":          driftLevel,
+			"drift_reason":         driftReason,
+			"baseline_footprint":   session.BaselineFootprint,
+			"current_footprint":    current,
 		}, nil
 	}
 
@@ -1493,21 +1517,23 @@ func (s *MCPServer) toolStartInterview(raw json.RawMessage) (any, error) {
 	}
 
 	return map[string]any{
-		"session_id":          session.SessionID,
-		"step":                session.Step,
-		"interview_questions": questions,
-		"pending_review":      session.PendingReview,
-		"question_topic":      questionTopic,
-		"must_confirm_topics": mustConfirmTopics(session),
-		"auto_decidable":      autoDecidableTopics(session),
-		"proposal_history":    session.ProposalHistory,
-		"proposal_accepted":   session.ProposalAccepted,
-		"user_profile":        session.UserProfile,
-		"consultant_lang":     session.ConsultantLang,
-		"available_mcps":      session.AvailableMCPs,
-		"available_mcp_tools": session.AvailableMCPTools,
-		"next_step":           nextStep,
-		"entrypoint":          "start_interview",
+		"session_id":           session.SessionID,
+		"step":                 session.Step,
+		"interview_questions":  questions,
+		"pending_review":       session.PendingReview,
+		"question_topic":       questionTopic,
+		"must_confirm_topics":  mustConfirmTopics(session),
+		"auto_decidable":       autoDecidableTopics(session),
+		"proposal_history":     session.ProposalHistory,
+		"proposal_accepted":    session.ProposalAccepted,
+		"user_profile":         session.UserProfile,
+		"consultant_lang":      session.ConsultantLang,
+		"available_mcps":       session.AvailableMCPs,
+		"available_mcp_tools":  session.AvailableMCPTools,
+		"autostart_mode":       mode,
+		"autostart_session_id": activeSessionID,
+		"next_step":            nextStep,
+		"entrypoint":           "start_interview",
 	}, nil
 }
 
@@ -1523,6 +1549,7 @@ func (s *MCPServer) toolIngestIntent(raw json.RawMessage) (any, error) {
 		return nil, err
 	}
 	session := s.getOrCreateSession(args.SessionID)
+	mode, activeSessionID := s.setAutostartState("on", session.SessionID)
 	if isEmptyUserProfileInput(args.UserProfile) {
 		s.applyDefaultUserProfile(session, "ingest_intent.default_profile")
 	}
@@ -1557,22 +1584,24 @@ func (s *MCPServer) toolIngestIntent(raw json.RawMessage) (any, error) {
 	}
 
 	return map[string]any{
-		"session_id":          session.SessionID,
-		"step":                session.Step,
-		"intent":              session.Intent,
-		"pending_review":      session.PendingReview,
-		"next_step":           nextStep,
-		"question_topic":      questionTopic,
-		"question_reason":     decision.QuestionReason,
-		"must_confirm_topics": decision.MustConfirm,
-		"auto_decidable":      decision.AutoDecidable,
-		"auto_assumptions":    decision.AutoAssumptions,
-		"proposal_history":    session.ProposalHistory,
-		"proposal_accepted":   session.ProposalAccepted,
-		"user_profile":        session.UserProfile,
-		"consultant_lang":     session.ConsultantLang,
-		"available_mcps":      session.AvailableMCPs,
-		"available_mcp_tools": session.AvailableMCPTools,
+		"session_id":           session.SessionID,
+		"step":                 session.Step,
+		"intent":               session.Intent,
+		"pending_review":       session.PendingReview,
+		"next_step":            nextStep,
+		"question_topic":       questionTopic,
+		"question_reason":      decision.QuestionReason,
+		"must_confirm_topics":  decision.MustConfirm,
+		"auto_decidable":       decision.AutoDecidable,
+		"auto_assumptions":     decision.AutoAssumptions,
+		"proposal_history":     session.ProposalHistory,
+		"proposal_accepted":    session.ProposalAccepted,
+		"user_profile":         session.UserProfile,
+		"consultant_lang":      session.ConsultantLang,
+		"available_mcps":       session.AvailableMCPs,
+		"available_mcp_tools":  session.AvailableMCPTools,
+		"autostart_mode":       mode,
+		"autostart_session_id": activeSessionID,
 	}, nil
 }
 
@@ -3227,38 +3256,132 @@ func (s *MCPServer) toolGetSessionStatus(raw json.RawMessage) (any, error) {
 	}
 	session := s.getOrCreateSession(args.SessionID)
 	evaluateVisualReviewState(session)
+	mode, activeSessionID := s.autostartState()
 	return map[string]any{
-		"session_id":          session.SessionID,
-		"step":                session.Step,
-		"step_history":        session.StepHistory,
-		"next":                nextAction(session),
-		"proposal_accepted":   session.ProposalAccepted,
-		"proposal_history":    session.ProposalHistory,
-		"council_consensus":   session.CouncilConsensus,
-		"council_phase":       session.CouncilPhase,
-		"plan_approved":       session.PlanApproved,
-		"mockup":              session.Mockup,
-		"user_approved":       session.UserApproved,
-		"requirement_tags":    session.RequirementTags,
-		"approved_criteria":   session.ApprovedCriteria,
-		"user_feedback":       session.UserFeedback,
-		"pending_review":      session.PendingReview,
-		"action_count":        len(session.ActionResults),
-		"verify_count":        len(session.VerifyResults),
-		"fix_loop_count":      session.FixLoopCount,
-		"max_fix_loops":       session.MaxFixLoops,
-		"reconcile_needed":    session.ReconcileNeeded,
-		"baseline_footprint":  session.BaselineFootprint,
-		"last_footprint":      session.LastFootprint,
-		"routing_policy":      session.RoutingPolicy,
-		"council_managers":    session.CouncilManagers,
-		"user_profile":        session.UserProfile,
-		"consultant_lang":     session.ConsultantLang,
-		"available_mcps":      session.AvailableMCPs,
-		"available_mcp_tools": session.AvailableMCPTools,
-		"visual_review":       session.VisualReview,
-		"last_error":          session.LastError,
-		"updated_at":          session.UpdatedAt,
+		"session_id":           session.SessionID,
+		"step":                 session.Step,
+		"step_history":         session.StepHistory,
+		"next":                 nextAction(session),
+		"proposal_accepted":    session.ProposalAccepted,
+		"proposal_history":     session.ProposalHistory,
+		"council_consensus":    session.CouncilConsensus,
+		"council_phase":        session.CouncilPhase,
+		"plan_approved":        session.PlanApproved,
+		"mockup":               session.Mockup,
+		"user_approved":        session.UserApproved,
+		"requirement_tags":     session.RequirementTags,
+		"approved_criteria":    session.ApprovedCriteria,
+		"user_feedback":        session.UserFeedback,
+		"pending_review":       session.PendingReview,
+		"action_count":         len(session.ActionResults),
+		"verify_count":         len(session.VerifyResults),
+		"fix_loop_count":       session.FixLoopCount,
+		"max_fix_loops":        session.MaxFixLoops,
+		"reconcile_needed":     session.ReconcileNeeded,
+		"baseline_footprint":   session.BaselineFootprint,
+		"last_footprint":       session.LastFootprint,
+		"routing_policy":       session.RoutingPolicy,
+		"council_managers":     session.CouncilManagers,
+		"user_profile":         session.UserProfile,
+		"consultant_lang":      session.ConsultantLang,
+		"available_mcps":       session.AvailableMCPs,
+		"available_mcp_tools":  session.AvailableMCPTools,
+		"visual_review":        session.VisualReview,
+		"last_error":           session.LastError,
+		"autostart_mode":       mode,
+		"autostart_session_id": activeSessionID,
+		"updated_at":           session.UpdatedAt,
+	}, nil
+}
+
+func normalizeAutostartMode(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "on", "enable", "enabled", "start", "true", "1":
+		return "on"
+	case "off", "disable", "disabled", "stop", "false", "0":
+		return "off"
+	default:
+		return ""
+	}
+}
+
+func (s *MCPServer) autostartState() (string, string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	mode := strings.TrimSpace(s.autostartMode)
+	if mode == "" {
+		mode = "off"
+	}
+	activeSessionID := strings.TrimSpace(s.autostartSessionID)
+	return mode, activeSessionID
+}
+
+func (s *MCPServer) setAutostartState(mode, sessionID string) (string, string) {
+	normalizedMode := normalizeAutostartMode(mode)
+	if normalizedMode == "" {
+		normalizedMode = "off"
+	}
+	sid := strings.TrimSpace(sessionID)
+	s.mu.Lock()
+	s.autostartMode = normalizedMode
+	if normalizedMode == "on" {
+		if sid != "" {
+			s.autostartSessionID = sid
+		}
+	} else {
+		s.autostartSessionID = ""
+	}
+	currentMode := strings.TrimSpace(s.autostartMode)
+	if currentMode == "" {
+		currentMode = "off"
+	}
+	activeSessionID := strings.TrimSpace(s.autostartSessionID)
+	s.mu.Unlock()
+	return currentMode, activeSessionID
+}
+
+func (s *MCPServer) toolAutostartSetMode(raw json.RawMessage) (any, error) {
+	var args struct {
+		Mode      string `json:"mode"`
+		SessionID string `json:"session_id"`
+		Reason    string `json:"reason"`
+	}
+	if err := json.Unmarshal(raw, &args); err != nil {
+		return nil, err
+	}
+	mode := normalizeAutostartMode(args.Mode)
+	if mode == "" {
+		return nil, fmt.Errorf("mode must be on or off")
+	}
+	sessionID := strings.TrimSpace(args.SessionID)
+	if mode == "on" && sessionID != "" {
+		_ = s.getOrCreateSession(sessionID)
+	}
+
+	mode, activeSessionID := s.setAutostartState(mode, sessionID)
+
+	message := "Autostart pipeline is now OFF."
+	nextStep := "manual"
+	if mode == "on" {
+		message = "Autostart pipeline is now ON. Keep using codex-troller workflow until session restart or explicit off."
+		nextStep = "start_or_resume_workflow"
+	}
+	return map[string]any{
+		"mode":                 mode,
+		"active_session_id":    activeSessionID,
+		"reason":               strings.TrimSpace(args.Reason),
+		"reset_on_mcp_restart": true,
+		"message":              message,
+		"next_step":            nextStep,
+	}, nil
+}
+
+func (s *MCPServer) toolAutostartGetMode(raw json.RawMessage) (any, error) {
+	mode, activeSessionID := s.autostartState()
+	return map[string]any{
+		"mode":                 mode,
+		"active_session_id":    activeSessionID,
+		"reset_on_mcp_restart": true,
 	}, nil
 }
 

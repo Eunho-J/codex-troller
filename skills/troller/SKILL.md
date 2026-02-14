@@ -1,21 +1,21 @@
 ---
-name: codex-troller-autostart
+name: troller
 description: Start codex-troller with interview-first workflow automatically
 argument-hint: "[task summary]"
 ---
 
-# codex-troller-autostart
+# troller
 
 Purpose: start a full task lifecycle with interview-first behavior by calling the `codex-troller` MCP tools directly, without asking the user to type workflow commands.
 
 ## Trigger
 
-- User mentions `$codex-troller-autostart` or asks to "start with interview" using codex-troller.
-- User mentions `$codex-troller-autostart off` (or equivalent disable intent) to stop the pipeline.
+- User mentions `$troller` or asks to "start with interview" using codex-troller.
+- User mentions `$troller off` (or equivalent disable intent) to stop the pipeline.
 
 ## Required Behavior
 
-1. If user explicitly requests off (`$codex-troller-autostart off`, `disable`, `stop`), call `autostart_set_mode` with `mode="off"` and end.
+1. If user explicitly requests off (`$troller off`, `disable`, `stop`), call `autostart_set_mode` with `mode="off"` and end.
 2. Otherwise call `autostart_set_mode` with `mode="on"` first.
 3. Immediately call `start_interview`.
    - If user background is known from prior conversation, pass it as `user_profile` to adapt depth/autonomy.

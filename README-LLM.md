@@ -27,11 +27,14 @@ Its purpose is to increase reliability by turning ambiguous user intent into a s
 
 Mode routing is split into two installed skills:
 - `codex-troller-mode-router`: always checks `on/off` mode before routing work.
-- `codex-troller-autostart`: runs the codex-troller workflow when mode is `on`.
+- `troller`: runs the codex-troller workflow when mode is `on`.
 
 ## Mode Routing Policy (mandatory)
 
-- Install both skills (`mode-router` + `autostart`).
+- Install both skills (`mode-router` + `troller`).
+- Update AGENTS rules for the chosen install scope:
+  - global install -> `~/.codex/AGENTS.md`
+  - local install -> `<repo>/AGENTS.md`
 - The first `start_interview` call turns workflow mode `on` for the current MCP process.
 - While mode is `on`, continue codex-troller pipeline for task requests.
 - Turn mode `off` only on explicit user request (`... off`, `disable`, `stop`).
@@ -327,11 +330,42 @@ PATH="$NODE_BIN_DIR:$PATH" "$NPX_BIN" --version
 ```bash
 rm -rf "$CODEX_HOME/skills/codex-troller-mode-router"
 cp -R "$SRC_DIR/skills/codex-troller-mode-router" "$CODEX_HOME/skills/codex-troller-mode-router"
-rm -rf "$CODEX_HOME/skills/codex-troller-autostart"
-cp -R "$SRC_DIR/skills/codex-troller-autostart" "$CODEX_HOME/skills/codex-troller-autostart"
+rm -rf "$CODEX_HOME/skills/troller"
+cp -R "$SRC_DIR/skills/troller" "$CODEX_HOME/skills/troller"
 ```
 
-10. Write profile from interview answers
+10. Install/update AGENTS mode-routing rules for selected scope
+```bash
+if [ "$CODEX_HOME" = "$HOME/.codex" ]; then
+  AGENTS_PATH="$HOME/.codex/AGENTS.md"
+else
+  AGENTS_PATH="$(pwd)/AGENTS.md"
+fi
+
+mkdir -p "$(dirname "$AGENTS_PATH")"
+touch "$AGENTS_PATH"
+
+awk '
+BEGIN{skip=0}
+$0=="# >>> codex-troller-mode-router >>>"{skip=1;next}
+$0=="# <<< codex-troller-mode-router <<<"{skip=0;next}
+skip==0{print}
+' "$AGENTS_PATH" > "$AGENTS_PATH.tmp" && mv "$AGENTS_PATH.tmp" "$AGENTS_PATH"
+
+cat >> "$AGENTS_PATH" <<'EOF'
+
+# >>> codex-troller-mode-router >>>
+1. For any actionable user request, call `autostart_get_mode` first.
+2. If mode is `on`, continue codex-troller workflow and follow `get_session_status.next` strictly.
+3. If mode is `off`, use default Codex behavior unless user explicitly asks to enable/start codex-troller.
+4. On explicit enable/start request, call `autostart_set_mode` with `mode="on"` and continue workflow.
+5. On explicit disable/off request, call `autostart_set_mode` with `mode="off"` and return to default behavior.
+6. Consultant/manager roles must never implement directly; only worker roles can execute `run_action`.
+# <<< codex-troller-mode-router <<<
+EOF
+```
+
+11. Write profile from interview answers
 ```bash
 # Replace values below with captured interview answers.
 PROFILE_OVERALL="intermediate"
@@ -351,13 +385,13 @@ cat > "$PROFILE_PATH" <<EOF
 EOF
 ```
 
-11. Register MCP server in config (idempotent section replace)
+12. Register MCP server in config (idempotent section replace)
 ```bash
 awk -v sec='[mcp_servers.codex-troller]' 'BEGIN{skip=0} $0==sec{skip=1;next} skip&&$0~/^\[/{skip=0} !skip{print}' "$CONFIG_PATH" > "$CONFIG_PATH.tmp" && mv "$CONFIG_PATH.tmp" "$CONFIG_PATH"
 printf '\n[mcp_servers.codex-troller]\ncommand = "%s"\n' "$MCP_BIN_PATH" >> "$CONFIG_PATH"
 ```
 
-12. If Playwright selected: register MCP + install dependencies command-by-command
+13. If Playwright selected: register MCP + install dependencies command-by-command
 ```bash
 awk -v sec='[mcp_servers.playwright]' 'BEGIN{skip=0} $0==sec{skip=1;next} skip&&$0~/^\[/{skip=0} !skip{print}' "$CONFIG_PATH" > "$CONFIG_PATH.tmp" && mv "$CONFIG_PATH.tmp" "$CONFIG_PATH"
 cat > "$BIN_DIR/playwright-mcp-launch" <<EOF
@@ -400,7 +434,7 @@ sudo env "PATH=$NODE_BIN_DIR:$PATH" "$NPX_BIN" -y playwright@latest install-deps
   - registration/config is complete,
   - runtime browser launch may still require host environment fixes.
 
-13. Write consent log
+14. Write consent log
 ```bash
 PLAYWRIGHT_MCP_VALUE="yes"   # or "no"
 cat > "$STATE_DIR/install-consent.log" <<EOF
@@ -417,7 +451,7 @@ profile_path: $PROFILE_PATH
 EOF
 ```
 
-14. Verify installation (no shell wrapper)
+15. Verify installation (no shell wrapper)
 ```bash
 test -x "$GO_BIN"
 test -x "$NODE_BIN"
@@ -425,7 +459,9 @@ test -x "$NPM_BIN"
 test -x "$NPX_BIN"
 test -x "$MCP_BIN_PATH"
 test -f "$CODEX_HOME/skills/codex-troller-mode-router/SKILL.md"
-test -f "$CODEX_HOME/skills/codex-troller-autostart/SKILL.md"
+test -f "$CODEX_HOME/skills/troller/SKILL.md"
+test -f "$AGENTS_PATH"
+grep -Fq '# >>> codex-troller-mode-router >>>' "$AGENTS_PATH"
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | "$MCP_BIN_PATH"
 echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | "$MCP_BIN_PATH"
 MCP_LIST_OUTPUT="$(CODEX_HOME="$CODEX_HOME" codex mcp list)"
@@ -435,7 +471,7 @@ if [ "$PLAYWRIGHT_MCP_VALUE" = "yes" ]; then
 fi
 ```
 
-15. Clean fetched files/folders
+16. Clean fetched files/folders
 ```bash
 rm -rf "$FETCH_DIR"
 ```
@@ -450,7 +486,8 @@ rm -rf "$FETCH_DIR"
 - Codex config has `[mcp_servers.codex-troller]`
 - If requested, config also has `[mcp_servers.playwright]`
 - Skill exists at `<CODEX_HOME>/skills/codex-troller-mode-router/SKILL.md`
-- Skill exists at `<CODEX_HOME>/skills/codex-troller-autostart/SKILL.md`
+- Skill exists at `<CODEX_HOME>/skills/troller/SKILL.md`
+- AGENTS mode-routing block exists in selected scope AGENTS file (`~/.codex/AGENTS.md` for global or `<repo>/AGENTS.md` for local)
 - `initialize` and `tools/list` JSON-RPC calls succeed via `<CODEX_HOME>/.codex-troller/bin/codex-mcp`
 - `CODEX_HOME="<target>" codex mcp list` includes `codex-troller` (and `playwright` when selected)
 

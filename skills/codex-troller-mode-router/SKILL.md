@@ -11,7 +11,7 @@ Purpose: keep codex-troller behavior switchable (`on/off`) without forcing every
 ## Trigger
 
 - Any user request that asks the assistant to do work.
-- Explicit mode command such as `$codex-troller-autostart on/off` or `$codex-troller-mode-router on/off`.
+- Explicit mode command such as `$troller on/off` or `$codex-troller-mode-router on/off`.
 
 ## Required Behavior
 
@@ -25,7 +25,7 @@ Purpose: keep codex-troller behavior switchable (`on/off`) without forcing every
 4. If current mode is `on`:
    - if `active_session_id` is empty, call `start_interview`.
    - if `active_session_id` exists, call `get_session_status` and follow `status.next`.
-   - then execute the workflow rules in `skills/codex-troller-autostart/SKILL.md`.
+   - then execute the workflow rules in `skills/troller/SKILL.md`.
 5. If current mode is `off` and user did not request enable:
    - do not call codex-troller workflow tools.
    - handle request with normal Codex behavior.

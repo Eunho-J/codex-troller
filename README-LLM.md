@@ -64,6 +64,7 @@ Before running any install command, ask the user and wait for explicit answers.
 - After approval, run the command and report result briefly.
 - If approval is denied, ask whether to skip or retry with a different method.
 - Install toolchain/runtime dependencies inside `<CODEX_HOME>/.codex-troller/deps` by default (Go, Node, Playwright assets).
+- Do not require persistent global environment variable setup for installation.
 
 Recommended expertise-question style (ask in user's language):
 
@@ -155,25 +156,24 @@ command -v tar
 2. Choose install scope and paths
 ```bash
 # global scope
-export CODEX_HOME="$HOME/.codex"
+CODEX_HOME="$HOME/.codex"
 # local scope
-# export CODEX_HOME="$(pwd)/.codex"
+# CODEX_HOME="$(pwd)/.codex"
 
-export CONFIG_PATH="$CODEX_HOME/config.toml"
-export STATE_DIR="$CODEX_HOME/.codex-troller"
-export BIN_DIR="$STATE_DIR/bin"
-export DEPS_DIR="$STATE_DIR/deps"
-export MCP_BIN_PATH="$BIN_DIR/codex-mcp"
-export PROFILE_PATH="$STATE_DIR/default_user_profile.json"
-export LAUNCHER_PATH="$BIN_DIR/codex-troller-launch"
-export CACHE_DIR="$STATE_DIR/cache"
-export NPM_CACHE_DIR="$DEPS_DIR/npm-cache"
-export PLAYWRIGHT_BROWSERS_DIR="$DEPS_DIR/playwright-browsers"
+CONFIG_PATH="$CODEX_HOME/config.toml"
+STATE_DIR="$CODEX_HOME/.codex-troller"
+BIN_DIR="$STATE_DIR/bin"
+DEPS_DIR="$STATE_DIR/deps"
+MCP_BIN_PATH="$BIN_DIR/codex-mcp"
+PROFILE_PATH="$STATE_DIR/default_user_profile.json"
+CACHE_DIR="$STATE_DIR/cache"
+NPM_CACHE_DIR="$DEPS_DIR/npm-cache"
+PLAYWRIGHT_BROWSERS_DIR="$DEPS_DIR/playwright-browsers"
 ```
 
 3. Create temp fetch directory
 ```bash
-export FETCH_DIR="$(mktemp -d)"
+FETCH_DIR="$(mktemp -d)"
 ```
 
 4. Fetch source (zip preferred, git fallback)
@@ -181,15 +181,15 @@ export FETCH_DIR="$(mktemp -d)"
 if command -v curl >/dev/null 2>&1 && command -v unzip >/dev/null 2>&1; then
   curl -fsSL https://github.com/Eunho-J/codex-troller/archive/refs/heads/main.zip -o "$FETCH_DIR/codex-troller.zip"
   unzip -q "$FETCH_DIR/codex-troller.zip" -d "$FETCH_DIR"
-  export SRC_DIR="$FETCH_DIR/codex-troller-main"
+  SRC_DIR="$FETCH_DIR/codex-troller-main"
 elif command -v wget >/dev/null 2>&1 && command -v unzip >/dev/null 2>&1; then
   wget -qO "$FETCH_DIR/codex-troller.zip" https://github.com/Eunho-J/codex-troller/archive/refs/heads/main.zip
   unzip -q "$FETCH_DIR/codex-troller.zip" -d "$FETCH_DIR"
-  export SRC_DIR="$FETCH_DIR/codex-troller-main"
+  SRC_DIR="$FETCH_DIR/codex-troller-main"
 else
   command -v git
   git clone --depth 1 https://github.com/Eunho-J/codex-troller.git "$FETCH_DIR/codex-troller-main"
-  export SRC_DIR="$FETCH_DIR/codex-troller-main"
+  SRC_DIR="$FETCH_DIR/codex-troller-main"
 fi
 ```
 
@@ -201,9 +201,9 @@ touch "$CONFIG_PATH"
 
 6. Install/reuse local Go toolchain inside state directory
 ```bash
-export GO_VERSION="$(awk '/^go /{print $2; exit}' "$SRC_DIR/go.mod")"
-export GO_ROOT="$DEPS_DIR/go"
-export GO_BIN="$GO_ROOT/bin/go"
+GO_VERSION="$(awk '/^go /{print $2; exit}' "$SRC_DIR/go.mod")"
+GO_ROOT="$DEPS_DIR/go"
+GO_BIN="$GO_ROOT/bin/go"
 
 if [ ! -x "$GO_BIN" ]; then
   OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -232,10 +232,10 @@ fi
 
 7. Install/reuse local Node.js toolchain inside state directory
 ```bash
-export NODE_VERSION="${NODE_VERSION:-22.13.1}"
-export NODE_ROOT="$DEPS_DIR/node"
-export NODE_BIN_DIR="$NODE_ROOT/bin"
-export NPX_BIN="$NODE_BIN_DIR/npx"
+NODE_VERSION="${NODE_VERSION:-22.13.1}"
+NODE_ROOT="$DEPS_DIR/node"
+NODE_BIN_DIR="$NODE_ROOT/bin"
+NPX_BIN="$NODE_BIN_DIR/npx"
 
 if [ ! -x "$NPX_BIN" ]; then
   OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -282,10 +282,10 @@ cp -R "$SRC_DIR/skills/codex-troller-autostart" "$CODEX_HOME/skills/codex-trolle
 10. Write profile from interview answers
 ```bash
 # Replace values below with captured interview answers.
-export PROFILE_OVERALL="intermediate"
-export PROFILE_RESPONSE_NEED="balanced"
-export PROFILE_TECHNICAL_DEPTH="balanced"
-export DOMAIN_KNOWLEDGE_JSON='{}'
+PROFILE_OVERALL="intermediate"
+PROFILE_RESPONSE_NEED="balanced"
+PROFILE_TECHNICAL_DEPTH="balanced"
+DOMAIN_KNOWLEDGE_JSON='{}'
 
 cat > "$PROFILE_PATH" <<EOF
 {
@@ -297,24 +297,13 @@ cat > "$PROFILE_PATH" <<EOF
 EOF
 ```
 
-11. Write launcher
-```bash
-cat > "$LAUNCHER_PATH" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-export CODEX_TROLLER_DEFAULT_PROFILE_PATH="$PROFILE_PATH"
-exec "$MCP_BIN_PATH"
-EOF
-chmod +x "$LAUNCHER_PATH"
-```
-
-12. Register MCP server in config (idempotent section replace)
+11. Register MCP server in config (idempotent section replace)
 ```bash
 awk -v sec='[mcp_servers.codex-troller]' 'BEGIN{skip=0} $0==sec{skip=1;next} skip&&$0~/^\[/{skip=0} !skip{print}' "$CONFIG_PATH" > "$CONFIG_PATH.tmp" && mv "$CONFIG_PATH.tmp" "$CONFIG_PATH"
-printf '\n[mcp_servers.codex-troller]\ncommand = "%s"\n' "$LAUNCHER_PATH" >> "$CONFIG_PATH"
+printf '\n[mcp_servers.codex-troller]\ncommand = "%s"\n' "$MCP_BIN_PATH" >> "$CONFIG_PATH"
 ```
 
-13. If Playwright selected: register MCP + install dependencies command-by-command
+12. If Playwright selected: register MCP + install dependencies command-by-command
 ```bash
 awk -v sec='[mcp_servers.playwright]' 'BEGIN{skip=0} $0==sec{skip=1;next} skip&&$0~/^\[/{skip=0} !skip{print}' "$CONFIG_PATH" > "$CONFIG_PATH.tmp" && mv "$CONFIG_PATH.tmp" "$CONFIG_PATH"
 cat > "$BIN_DIR/playwright-mcp-launch" <<EOF
@@ -345,9 +334,9 @@ npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSER
   2) skip Playwright.
   Then execute choice and re-verify. Repeat until success or explicit skip.
 
-14. Write consent log
+13. Write consent log
 ```bash
-export PLAYWRIGHT_MCP_VALUE="yes"   # or "no"
+PLAYWRIGHT_MCP_VALUE="yes"   # or "no"
 cat > "$STATE_DIR/install-consent.log" <<EOF
 timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 terms_version: 2026-02-14
@@ -362,18 +351,17 @@ profile_path: $PROFILE_PATH
 EOF
 ```
 
-15. Verify installation (no shell wrapper)
+14. Verify installation (no shell wrapper)
 ```bash
 test -x "$GO_BIN"
 test -x "$NPX_BIN"
 test -x "$MCP_BIN_PATH"
-test -x "$LAUNCHER_PATH"
 test -f "$CODEX_HOME/skills/codex-troller-autostart/SKILL.md"
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | "$MCP_BIN_PATH"
 echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | "$MCP_BIN_PATH"
 ```
 
-16. Clean fetched files/folders
+15. Clean fetched files/folders
 ```bash
 rm -rf "$FETCH_DIR"
 ```
@@ -384,7 +372,6 @@ rm -rf "$FETCH_DIR"
 - `<CODEX_HOME>/.codex-troller/deps/node/bin/npx` exists
 - If Playwright selected: `<CODEX_HOME>/.codex-troller/deps/playwright-browsers` has browser files
 - `<CODEX_HOME>/.codex-troller/bin/codex-mcp` exists
-- `<CODEX_HOME>/.codex-troller/bin/codex-troller-launch` exists
 - Codex config has `[mcp_servers.codex-troller]`
 - If requested, config also has `[mcp_servers.playwright]`
 - Skill exists at `<CODEX_HOME>/skills/codex-troller-autostart/SKILL.md`

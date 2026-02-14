@@ -1,55 +1,71 @@
 # Agent Install Guide
 
-이 문서는 사용자가 "설치해줘"라고 요청했을 때, 기본 상태의 Codex agent가 추가 질문 없이 실행할 설치 절차를 정의한다.
+This document defines the installation flow for a "just install it for me" request.
 
-## 목표
+## Goals
 
-- 사용자가 직접 설정 파일을 만지지 않아도 설치가 끝나야 한다.
-- 설치는 재실행(idempotent) 가능해야 한다.
-- 설치 후 즉시 동작 검증까지 자동으로 수행해야 한다.
+- Require explicit consent before modifying config or installing integrations.
+- Keep setup idempotent and repeatable.
+- Capture initial user expertise profile at install time and reuse it as default.
 
-## Agent Standard Procedure
+## Interactive flow (`make agent-install`)
 
-1. 저장소 루트에서 설치 명령 실행:
-   - `make agent-install`
-2. 설치 완료 후 검증:
-   - `make smoke`
-   - smoke는 council 토론 합의(`council_finalize_consensus`)와 사용자 승인 게이트(`record_user_feedback`)까지 포함한 완료 경로를 검사해야 한다.
-3. 설치 결과 확인:
-   - 바이너리 존재: `.codex-mcp/bin/codex-mcp`
-   - 토론 DB 존재: `.codex-mcp/state/council.db`
-   - Codex 설정 반영: `~/.codex/config.toml`에 `[mcp_servers.codex-troller]` 섹션 존재
-   - 스킬 반영: `~/.codex/skills/codex-troller-autostart/SKILL.md` 존재
+`scripts/install-agent.sh` runs an interview-style installer with these gates:
 
-## What `make agent-install` Does
+1. LLM consent gate
+   - User must agree to terms before any build/config change.
+   - If not accepted, installation stops immediately.
+2. Install scope selection
+   - `global` or `local`.
+   - `global`: writes under `~/.codex/...`
+   - `local`: writes under `<repo>/.codex/...`
+3. Optional Playwright MCP integration
+   - Ask whether to register Playwright MCP (`mcp_servers.playwright`).
+   - Source: `https://github.com/microsoft/playwright-mcp`
+   - If accepted, config appends:
+     - `command = "npx"`
+     - `args = ["-y", "@playwright/mcp@latest"]`
+4. Short expertise survey
+   - overall: `beginner|intermediate|advanced`
+   - response_need: `low|balanced|high`
+   - technical_depth: `abstract|balanced|technical`
+   - optional domain hints: comma list (`backend,frontend,security`, ...)
+5. Setup execution
+   - runs `make setup` (build/test/smoke/hooks)
+6. Config + skill install
+   - registers `mcp_servers.codex-troller`
+   - installs `skills/codex-troller-autostart`
+7. Default profile persistence
+   - writes JSON profile to `<CODEX_HOME>/codex-troller/default_user_profile.json`
+   - launcher exports `CODEX_TROLLER_DEFAULT_PROFILE_PATH`
 
-- `make setup` 실행:
-  - 빌드: `make build`
-  - 테스트: `make test`
-  - 워크플로우 스모크: `make smoke`
-  - Git hooks 설치: `make install-hooks`
-- Codex 설정 파일 자동 반영:
-  - 기본 경로: `~/.codex/config.toml`
-  - 환경변수 override: `CODEX_CONFIG_PATH=/path/to/config.toml`
-  - 추가되는 설정:
-    - `[mcp_servers.codex-troller]`
-    - `command = "<repo>/.codex-mcp/bin/codex-mcp"`
-- 스킬 자동 설치:
-  - `skills/codex-troller-autostart/SKILL.md`를 `~/.codex/skills/codex-troller-autostart/`로 복사
-- 기본 역할-모델 라우팅 정책 탑재:
-  - 인터뷰: `gpt-5.2`
-  - 오케스트레이터/리뷰: `gpt-5.3-codex`
-  - 구현 워커: `gpt-5.3-codex-spark`
+## Automation mode (no prompt)
 
-## Idempotency Rules
+Use:
 
-- 동일 환경에서 `make agent-install`을 반복 실행해도 설정 중복이 생기지 않아야 한다.
-- 기존 `[mcp_servers.codex-troller]` 섹션이 있으면 삭제 후 최신 경로로 재등록한다.
-- 스킬 디렉터리는 덮어써서 항상 최신 스킬 정의를 유지한다.
+```bash
+AGENT_INSTALL_NON_INTERACTIVE=1 \
+INSTALL_TERMS_AGREED=yes \
+INSTALL_SCOPE=global \
+INSTALL_PLAYWRIGHT_MCP=no \
+INSTALL_PROFILE_OVERALL=intermediate \
+INSTALL_PROFILE_RESPONSE_NEED=balanced \
+INSTALL_PROFILE_TECHNICAL_DEPTH=balanced \
+INSTALL_PROFILE_DOMAIN_HINTS="backend,security" \
+make agent-install
+```
 
-## Failure Handling
+## Idempotency rules
 
-- Go 부재: `scripts/bootstrap-go.sh`가 `.codex-mcp/.tools/go`에 자동 설치.
-- 네트워크 실패: 설치 중단 후 에러 반환(재시도 가능).
-- 권한 문제: config 파일 경로 권한 확인 후 재실행.
-- Git 저장소가 아닌 폴더: hook 설치를 자동 skip하고 나머지 설치/검증은 계속 진행.
+- Existing `[mcp_servers.codex-troller]` and `[mcp_servers.playwright]` sections are removed then re-written.
+- Skill directory is replaced with the latest copy.
+- Launcher script is overwritten with current profile path.
+
+## Verification checklist
+
+- Binary exists: `.codex-mcp/bin/codex-mcp`
+- Launcher exists: `.codex-mcp/bin/codex-troller-launch`
+- Config has `[mcp_servers.codex-troller]`
+- Optional config has `[mcp_servers.playwright]` (if accepted)
+- Skill exists at `<CODEX_HOME>/skills/codex-troller-autostart/SKILL.md`
+- `make smoke` passes

@@ -88,11 +88,23 @@ TAGS_JSON="$(csv_to_json_array "$SMOKE_TAGS_CSV")"
 AVAILABLE_MCPS_JSON="$(csv_to_optional_json_array "$SMOKE_AVAILABLE_MCPS")"
 AVAILABLE_MCP_TOOLS_JSON="$(csv_to_optional_json_array "$SMOKE_AVAILABLE_MCP_TOOLS")"
 RAW_INTENT="$(printf '목표: %s\n범위: %s\n제약: %s\n성공기준: %s' "$SMOKE_GOAL" "$SMOKE_SCOPE" "$SMOKE_CONSTRAINT" "$SMOKE_CRITERIA")"
-COUNCIL_ROLES=(ux_director frontend_lead backend_lead db_lead asset_manager security_manager)
 
 rpc_call "initialize" "{}"
 tool_call "ingest_intent" "$(jq -cn --arg sid "$SESSION_ID" --arg raw "$RAW_INTENT" '{session_id:$sid,raw_intent:$raw}')"
 tool_call "council_start_briefing" "$(jq -cn --arg sid "$SESSION_ID" '{session_id:$sid}')"
+mapfile -t COUNCIL_ROLES < <(echo "$LAST_STRUCTURED" | jq -r '.roles[]?.role')
+if [[ ${#COUNCIL_ROLES[@]} -eq 0 ]]; then
+  echo "$OUTPUT_LOG"
+  echo "smoke failed: no council roles returned from council_start_briefing" >&2
+  exit 1
+fi
+FLOOR_ROLE="${COUNCIL_ROLES[0]}"
+for role in "${COUNCIL_ROLES[@]}"; do
+  if [[ "$role" == "ux_director" ]]; then
+    FLOOR_ROLE="ux_director"
+    break
+  fi
+done
 
 for role in "${COUNCIL_ROLES[@]}"; do
   tool_call "council_submit_brief" "$(jq -cn --arg sid "$SESSION_ID" --arg role "$role" '{session_id:$sid,role:$role,priority:"core",contribution:($role + " contribution"),quick_decisions:"none"}')"
@@ -107,7 +119,7 @@ if [[ ${#TOPIC_IDS[@]} -eq 0 ]]; then
 fi
 
 for topic_id in "${TOPIC_IDS[@]}"; do
-  tool_call "council_request_floor" "$(jq -cn --arg sid "$SESSION_ID" --argjson topic "$topic_id" '{session_id:$sid,topic_id:$topic,role:"ux_director",reason:"smoke kickoff"}')"
+  tool_call "council_request_floor" "$(jq -cn --arg sid "$SESSION_ID" --argjson topic "$topic_id" --arg role "$FLOOR_ROLE" '{session_id:$sid,topic_id:$topic,role:$role,reason:"smoke kickoff"}')"
   request_id="$(echo "$LAST_STRUCTURED" | jq -r '.request_id')"
   if [[ -z "$request_id" || "$request_id" == "null" ]]; then
     echo "$OUTPUT_LOG"
@@ -117,7 +129,7 @@ for topic_id in "${TOPIC_IDS[@]}"; do
   tool_call "council_grant_floor" "$(jq -cn --arg sid "$SESSION_ID" --argjson request "$request_id" '{session_id:$sid,request_id:$request}')"
   tool_call "council_publish_statement" "$(jq -cn --arg sid "$SESSION_ID" --argjson request "$request_id" '{session_id:$sid,request_id:$request,content:"smoke statement"}')"
   for role in "${COUNCIL_ROLES[@]}"; do
-    if [[ "$role" == "ux_director" ]]; then
+    if [[ "$role" == "$FLOOR_ROLE" ]]; then
       continue
     fi
     tool_call "council_respond_topic" "$(jq -cn --arg sid "$SESSION_ID" --argjson topic "$topic_id" --arg role "$role" '{session_id:$sid,topic_id:$topic,role:$role,decision:"pass",content:"pass"}')"

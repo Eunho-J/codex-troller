@@ -524,6 +524,184 @@ func TestSetAndGetAgentRoutingPolicy(t *testing.T) {
 	}
 }
 
+func TestDefaultProfileAppliedWhenInputMissing(t *testing.T) {
+	tempDir := t.TempDir()
+	profilePath := filepath.Join(tempDir, "default_user_profile.json")
+	profileJSON := `{
+		"overall":"advanced",
+		"response_need":"high",
+		"technical_depth":"technical",
+		"domain_knowledge":{"backend":"advanced","security":"intermediate"}
+	}`
+	if err := os.WriteFile(profilePath, []byte(profileJSON), 0o644); err != nil {
+		t.Fatalf("write profile failed: %v", err)
+	}
+	srv := NewMCPServer(Config{
+		StatePath:      filepath.Join(tempDir, "state.json"),
+		DefaultProfile: profilePath,
+	})
+	out, err := srv.toolStartInterview([]byte(`{"session_id":"default-profile-1","raw_intent":"goal: stabilize backend auth API"}`))
+	if err != nil {
+		t.Fatalf("start_interview failed: %v", err)
+	}
+	result := out.(map[string]any)
+	profile, ok := result["user_profile"].(UserKnowledgeProfile)
+	if !ok {
+		t.Fatalf("expected UserKnowledgeProfile, got %T", result["user_profile"])
+	}
+	if profile.Overall != "advanced" {
+		t.Fatalf("expected default overall advanced, got %s", profile.Overall)
+	}
+	if profile.TechnicalDepth != "technical" {
+		t.Fatalf("expected default technical depth technical, got %s", profile.TechnicalDepth)
+	}
+	if profile.ResponseNeed != "high" {
+		t.Fatalf("expected default response_need high, got %s", profile.ResponseNeed)
+	}
+	if profile.DomainKnowledge["backend"] != "advanced" {
+		t.Fatalf("expected backend knowledge advanced, got %s", profile.DomainKnowledge["backend"])
+	}
+}
+
+func TestInputProfileOverridesDefaultProfile(t *testing.T) {
+	tempDir := t.TempDir()
+	profilePath := filepath.Join(tempDir, "default_user_profile.json")
+	profileJSON := `{
+		"overall":"beginner",
+		"response_need":"low",
+		"technical_depth":"abstract",
+		"domain_knowledge":{"backend":"beginner"}
+	}`
+	if err := os.WriteFile(profilePath, []byte(profileJSON), 0o644); err != nil {
+		t.Fatalf("write profile failed: %v", err)
+	}
+	srv := NewMCPServer(Config{
+		StatePath:      filepath.Join(tempDir, "state.json"),
+		DefaultProfile: profilePath,
+	})
+	out, err := srv.toolIngestIntent([]byte(`{
+		"session_id":"default-profile-2",
+		"raw_intent":"goal: stabilize backend auth API",
+		"user_profile":{"overall":"advanced","response_need":"high","technical_depth":"technical","domain_knowledge":{"backend":"advanced"}}
+	}`))
+	if err != nil {
+		t.Fatalf("ingest_intent failed: %v", err)
+	}
+	result := out.(map[string]any)
+	profile, ok := result["user_profile"].(UserKnowledgeProfile)
+	if !ok {
+		t.Fatalf("expected UserKnowledgeProfile, got %T", result["user_profile"])
+	}
+	if profile.Overall != "advanced" {
+		t.Fatalf("expected explicit overall advanced, got %s", profile.Overall)
+	}
+	if profile.TechnicalDepth != "technical" {
+		t.Fatalf("expected explicit technical depth technical, got %s", profile.TechnicalDepth)
+	}
+	if profile.ResponseNeed != "high" {
+		t.Fatalf("expected explicit response_need high, got %s", profile.ResponseNeed)
+	}
+}
+
+func TestCouncilConfigureTeamReplaceAndStart(t *testing.T) {
+	srv := NewMCPServer(Config{StatePath: filepath.Join(t.TempDir(), "state.json")})
+	if _, err := srv.toolIngestIntent([]byte(`{"session_id":"council-team-1","raw_intent":"goal: stabilize auth API"}`)); err != nil {
+		t.Fatalf("ingest failed: %v", err)
+	}
+	configOut, err := srv.toolCouncilConfigureTeam([]byte(`{
+		"session_id":"council-team-1",
+		"mode":"replace",
+		"managers":[
+			{"role":"development lead","domain":"backend"},
+			{"role":"ux director","domain":"frontend"}
+		]
+	}`))
+	if err != nil {
+		t.Fatalf("council_configure_team failed: %v", err)
+	}
+	config := configOut.(map[string]any)
+	managers, ok := config["council_managers"].([]CouncilManager)
+	if !ok {
+		t.Fatalf("expected []CouncilManager, got %T", config["council_managers"])
+	}
+	if len(managers) != 2 {
+		t.Fatalf("expected 2 managers, got %d", len(managers))
+	}
+
+	startOut, err := srv.toolCouncilStartBriefing([]byte(`{"session_id":"council-team-1"}`))
+	if err != nil {
+		t.Fatalf("council_start_briefing failed: %v", err)
+	}
+	start := startOut.(map[string]any)
+	roles, ok := start["roles"].([]councilRoleState)
+	if !ok {
+		t.Fatalf("expected []councilRoleState, got %T", start["roles"])
+	}
+	roleSet := map[string]bool{}
+	for _, role := range roles {
+		roleSet[role.Role] = true
+	}
+	if !roleSet["development_lead"] || !roleSet["ux_director"] {
+		t.Fatalf("expected custom roles in briefing, got %v", roles)
+	}
+	if len(roles) != 2 {
+		t.Fatalf("expected exactly 2 active roles, got %d", len(roles))
+	}
+}
+
+func TestCouncilCustomRoleParticipationGate(t *testing.T) {
+	srv := NewMCPServer(Config{StatePath: filepath.Join(t.TempDir(), "state.json")})
+	sid := "council-team-2"
+	if _, err := srv.toolIngestIntent([]byte(`{"session_id":"council-team-2","raw_intent":"goal: improve service reliability"}`)); err != nil {
+		t.Fatalf("ingest failed: %v", err)
+	}
+	if _, err := srv.toolCouncilStartBriefing([]byte(`{
+		"session_id":"council-team-2",
+		"manager_mode":"replace",
+		"managers":[
+			{"role":"engineering lead","domain":"backend"},
+			{"role":"qa lead","domain":"general"}
+		]
+	}`)); err != nil {
+		t.Fatalf("start briefing failed: %v", err)
+	}
+	for _, role := range []string{"engineering_lead", "qa_lead"} {
+		payload := fmt.Sprintf(`{"session_id":"%s","role":"%s","priority":"core","contribution":"%s contribution","quick_decisions":"none"}`, sid, role, role)
+		if _, err := srv.toolCouncilSubmitBrief([]byte(payload)); err != nil {
+			t.Fatalf("submit brief failed (%s): %v", role, err)
+		}
+	}
+	summaryOut, err := srv.toolCouncilSummarizeBriefs([]byte(`{"session_id":"council-team-2"}`))
+	if err != nil {
+		t.Fatalf("summarize briefs failed: %v", err)
+	}
+	topics := summaryOut.(map[string]any)["topics"].([]councilTopic)
+	if len(topics) == 0 {
+		t.Fatal("expected topics")
+	}
+	topicID := topics[0].ID
+	reqOut, err := srv.toolCouncilRequestFloor([]byte(fmt.Sprintf(`{"session_id":"%s","topic_id":%d,"role":"engineering_lead","reason":"kickoff"}`, sid, topicID)))
+	if err != nil {
+		t.Fatalf("request floor failed: %v", err)
+	}
+	requestID := reqOut.(map[string]any)["request_id"].(int64)
+	if _, err := srv.toolCouncilGrantFloor([]byte(fmt.Sprintf(`{"session_id":"%s","request_id":%d}`, sid, requestID))); err != nil {
+		t.Fatalf("grant floor failed: %v", err)
+	}
+	if _, err := srv.toolCouncilPublishStatement([]byte(fmt.Sprintf(`{"session_id":"%s","request_id":%d,"content":"statement"}`, sid, requestID))); err != nil {
+		t.Fatalf("publish statement failed: %v", err)
+	}
+	if _, err := srv.toolCouncilCloseTopic([]byte(fmt.Sprintf(`{"session_id":"%s","topic_id":%d}`, sid, topicID))); err == nil {
+		t.Fatal("expected close topic to fail before qa_lead response")
+	}
+	if _, err := srv.toolCouncilRespondTopic([]byte(fmt.Sprintf(`{"session_id":"%s","topic_id":%d,"role":"qa_lead","decision":"pass","content":"pass"}`, sid, topicID))); err != nil {
+		t.Fatalf("qa_lead pass failed: %v", err)
+	}
+	if _, err := srv.toolCouncilCloseTopic([]byte(fmt.Sprintf(`{"session_id":"%s","topic_id":%d}`, sid, topicID))); err != nil {
+		t.Fatalf("close topic after custom role pass failed: %v", err)
+	}
+}
+
 func TestGeneratePlanRequiresCouncilConsensus(t *testing.T) {
 	srv := NewMCPServer(Config{StatePath: filepath.Join(t.TempDir(), "state.json")})
 	sid := "council-gate-1"
@@ -1135,6 +1313,7 @@ func TestToolsListResponseContainsCoreTools(t *testing.T) {
 		"reconcile_session_state":       false,
 		"set_agent_routing_policy":      false,
 		"get_agent_routing_policy":      false,
+		"council_configure_team":        false,
 		"council_start_briefing":        false,
 		"council_submit_brief":          false,
 		"council_summarize_briefs":      false,

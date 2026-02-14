@@ -2,57 +2,328 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONFIG_PATH="${CODEX_CONFIG_PATH:-$HOME/.codex/config.toml}"
 BIN_PATH="$ROOT_DIR/.codex-mcp/bin/codex-mcp"
+LAUNCHER_PATH="$ROOT_DIR/.codex-mcp/bin/codex-troller-launch"
 SKILL_SRC="$ROOT_DIR/skills/codex-troller-autostart"
-SKILL_DST="$HOME/.codex/skills/codex-troller-autostart"
+
+NON_INTERACTIVE="${AGENT_INSTALL_NON_INTERACTIVE:-0}"
+INSTALL_SCOPE="${INSTALL_SCOPE:-}"
+PLAYWRIGHT_CONSENT="${INSTALL_PLAYWRIGHT_MCP:-}"
+TERMS_CONSENT="${INSTALL_TERMS_AGREED:-}"
+
+PROFILE_OVERALL="${INSTALL_PROFILE_OVERALL:-}"
+PROFILE_RESPONSE_NEED="${INSTALL_PROFILE_RESPONSE_NEED:-}"
+PROFILE_TECHNICAL_DEPTH="${INSTALL_PROFILE_TECHNICAL_DEPTH:-}"
+PROFILE_DOMAIN_HINTS="${INSTALL_PROFILE_DOMAIN_HINTS:-}"
+
+lower() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+normalize_yes_no() {
+  case "$(lower "$(echo "$1" | xargs)")" in
+    y|yes|agree|agreed|동의|예) echo "yes" ;;
+    n|no|disagree|미동의|아니오) echo "no" ;;
+    *) echo "" ;;
+  esac
+}
+
+normalize_install_scope() {
+  case "$(lower "$(echo "$1" | xargs)")" in
+    global|g|1|전역) echo "global" ;;
+    local|l|2|로컬) echo "local" ;;
+    *) echo "" ;;
+  esac
+}
+
+normalize_level() {
+  case "$(lower "$(echo "$1" | xargs)")" in
+    beginner|novice|1|초급) echo "beginner" ;;
+    intermediate|mid|2|중급) echo "intermediate" ;;
+    advanced|expert|3|고급) echo "advanced" ;;
+    *) echo "" ;;
+  esac
+}
+
+normalize_response_need() {
+  case "$(lower "$(echo "$1" | xargs)")" in
+    low|light|1|적게) echo "low" ;;
+    balanced|normal|2|보통) echo "balanced" ;;
+    high|detailed|3|많이) echo "high" ;;
+    *) echo "" ;;
+  esac
+}
+
+normalize_technical_depth() {
+  case "$(lower "$(echo "$1" | xargs)")" in
+    abstract|high-level|1|추상) echo "abstract" ;;
+    balanced|normal|2|중간) echo "balanced" ;;
+    technical|deep|3|기술) echo "technical" ;;
+    *) echo "" ;;
+  esac
+}
+
+normalize_domain_key() {
+  case "$(lower "$(echo "$1" | xargs)")" in
+    frontend|front|ui|ux) echo "frontend" ;;
+    backend|back|api|server) echo "backend" ;;
+    db|database|data) echo "db" ;;
+    security|auth|permission) echo "security" ;;
+    asset|assets|content|media) echo "asset" ;;
+    ai|ml|llm|vllm|deep-learning|deeplearning) echo "ai_ml" ;;
+    infra|devops|ops|ci|cd|platform) echo "infra" ;;
+    game|gameplay) echo "game" ;;
+    *) echo "" ;;
+  esac
+}
+
+prompt_yes_no() {
+  local message="$1"
+  local default_value="$2"
+  local reply=""
+  while true; do
+    read -r -p "$message " reply || true
+    if [[ -z "$(echo "$reply" | xargs)" ]]; then
+      reply="$default_value"
+    fi
+    local normalized
+    normalized="$(normalize_yes_no "$reply")"
+    if [[ "$normalized" == "yes" || "$normalized" == "no" ]]; then
+      echo "$normalized"
+      return 0
+    fi
+    echo "Please answer yes or no."
+  done
+}
+
+prompt_scope() {
+  local reply=""
+  while true; do
+    read -r -p "Install scope? [global/local] (default: global): " reply || true
+    if [[ -z "$(echo "$reply" | xargs)" ]]; then
+      reply="global"
+    fi
+    local normalized
+    normalized="$(normalize_install_scope "$reply")"
+    if [[ "$normalized" == "global" || "$normalized" == "local" ]]; then
+      echo "$normalized"
+      return 0
+    fi
+    echo "Please answer global or local."
+  done
+}
+
+strip_mcp_section() {
+  local config_path="$1"
+  local section="$2"
+  local tmp_file
+  tmp_file="$(mktemp)"
+  awk -v sec="[""$section""]" '
+  BEGIN { skip = 0 }
+  {
+    if ($0 == sec) {
+      skip = 1
+      next
+    }
+    if (skip == 1 && $0 ~ /^\[/) {
+      skip = 0
+    }
+    if (skip == 0) {
+      print $0
+    }
+  }
+  ' "$config_path" >"$tmp_file"
+  mv "$tmp_file" "$config_path"
+}
 
 echo "[agent-install] start"
 echo "[agent-install] root: $ROOT_DIR"
+
+if [[ "$NON_INTERACTIVE" != "1" ]]; then
+  cat <<'EOF'
+[agent-install] LLM installer consent gate
+This installer will run build/test/smoke, install Codex MCP config, install skills,
+and optionally add Playwright MCP wiring. It also records your initial expertise profile.
+No destructive git reset/checkout will be executed.
+EOF
+  TERMS_CONSENT="$(prompt_yes_no "Do you agree to these terms? [yes/no] (default: no):" "no")"
+else
+  TERMS_CONSENT="$(normalize_yes_no "$TERMS_CONSENT")"
+fi
+
+if [[ "$TERMS_CONSENT" != "yes" ]]; then
+  echo "[agent-install] aborted: terms were not accepted" >&2
+  exit 1
+fi
+
+if [[ "$NON_INTERACTIVE" != "1" ]]; then
+  INSTALL_SCOPE="$(prompt_scope)"
+else
+  INSTALL_SCOPE="$(normalize_install_scope "$INSTALL_SCOPE")"
+  if [[ "$INSTALL_SCOPE" == "" ]]; then
+    INSTALL_SCOPE="global"
+  fi
+fi
+
+CODEX_HOME_DEFAULT="$HOME/.codex"
+if [[ "$INSTALL_SCOPE" == "local" ]]; then
+  CODEX_HOME_DEFAULT="$ROOT_DIR/.codex"
+fi
+
+CODEX_HOME_PATH="${CODEX_HOME_PATH:-$CODEX_HOME_DEFAULT}"
+CONFIG_PATH="${CODEX_CONFIG_PATH:-$CODEX_HOME_PATH/config.toml}"
+SKILL_DST="$CODEX_HOME_PATH/skills/codex-troller-autostart"
+PROFILE_PATH="${CODEX_TROLLER_PROFILE_PATH:-$CODEX_HOME_PATH/codex-troller/default_user_profile.json}"
+
+echo "[agent-install] scope: $INSTALL_SCOPE"
+echo "[agent-install] codex_home: $CODEX_HOME_PATH"
 echo "[agent-install] config: $CONFIG_PATH"
+echo "[agent-install] profile: $PROFILE_PATH"
+
+if [[ "$NON_INTERACTIVE" != "1" ]]; then
+  PLAYWRIGHT_CONSENT="$(prompt_yes_no "Install Playwright MCP integration now? [yes/no] (default: no):" "no")"
+else
+  PLAYWRIGHT_CONSENT="$(normalize_yes_no "$PLAYWRIGHT_CONSENT")"
+  if [[ "$PLAYWRIGHT_CONSENT" == "" ]]; then
+    PLAYWRIGHT_CONSENT="no"
+  fi
+fi
 
 make -C "$ROOT_DIR" setup >/dev/null
 
 mkdir -p "$(dirname "$CONFIG_PATH")"
 touch "$CONFIG_PATH"
+mkdir -p "$(dirname "$PROFILE_PATH")"
 
-TMP_FILE="$(mktemp)"
-cleanup() {
-  rm -f "$TMP_FILE"
-}
-trap cleanup EXIT
+if [[ "$NON_INTERACTIVE" != "1" ]]; then
+  local_overall_raw=""
+  local_response_raw=""
+  local_technical_raw=""
+  local_domain_raw=""
+  while true; do
+    read -r -p "Your software/build expertise level? [beginner/intermediate/advanced] (default: intermediate): " local_overall_raw || true
+    if [[ -z "$(echo "$local_overall_raw" | xargs)" ]]; then
+      local_overall_raw="intermediate"
+    fi
+    PROFILE_OVERALL="$(normalize_level "$local_overall_raw")"
+    [[ -n "$PROFILE_OVERALL" ]] && break
+    echo "Please choose beginner, intermediate, or advanced."
+  done
+  while true; do
+    read -r -p "How much detail should the consultant ask from you? [low/balanced/high] (default: balanced): " local_response_raw || true
+    if [[ -z "$(echo "$local_response_raw" | xargs)" ]]; then
+      local_response_raw="balanced"
+    fi
+    PROFILE_RESPONSE_NEED="$(normalize_response_need "$local_response_raw")"
+    [[ -n "$PROFILE_RESPONSE_NEED" ]] && break
+    echo "Please choose low, balanced, or high."
+  done
+  while true; do
+    read -r -p "Preferred explanation depth? [abstract/balanced/technical] (default: balanced): " local_technical_raw || true
+    if [[ -z "$(echo "$local_technical_raw" | xargs)" ]]; then
+      local_technical_raw="balanced"
+    fi
+    PROFILE_TECHNICAL_DEPTH="$(normalize_technical_depth "$local_technical_raw")"
+    [[ -n "$PROFILE_TECHNICAL_DEPTH" ]] && break
+    echo "Please choose abstract, balanced, or technical."
+  done
+  read -r -p "Optional domains you know well (comma-separated, e.g. backend,frontend,security): " local_domain_raw || true
+  PROFILE_DOMAIN_HINTS="$local_domain_raw"
+else
+  PROFILE_OVERALL="$(normalize_level "$PROFILE_OVERALL")"
+  PROFILE_RESPONSE_NEED="$(normalize_response_need "$PROFILE_RESPONSE_NEED")"
+  PROFILE_TECHNICAL_DEPTH="$(normalize_technical_depth "$PROFILE_TECHNICAL_DEPTH")"
+  PROFILE_DOMAIN_HINTS="${PROFILE_DOMAIN_HINTS:-}"
+fi
 
-# Remove existing codex-troller MCP section for idempotent install.
-awk '
-BEGIN { skip = 0 }
+if [[ "$PROFILE_OVERALL" == "" ]]; then
+  PROFILE_OVERALL="intermediate"
+fi
+if [[ "$PROFILE_RESPONSE_NEED" == "" ]]; then
+  PROFILE_RESPONSE_NEED="balanced"
+fi
+if [[ "$PROFILE_TECHNICAL_DEPTH" == "" ]]; then
+  PROFILE_TECHNICAL_DEPTH="balanced"
+fi
+
+declare -A DOMAIN_MAP=()
+IFS=',' read -r -a DOMAIN_ITEMS <<<"$PROFILE_DOMAIN_HINTS"
+for item in "${DOMAIN_ITEMS[@]}"; do
+  token="$(echo "$item" | xargs)"
+  [[ -z "$token" ]] && continue
+  raw_key="$token"
+  raw_level="$PROFILE_OVERALL"
+  if [[ "$token" == *"="* ]]; then
+    raw_key="${token%%=*}"
+    raw_level="${token#*=}"
+  fi
+  domain_key="$(normalize_domain_key "$raw_key")"
+  domain_level="$(normalize_level "$raw_level")"
+  if [[ -z "$domain_key" ]]; then
+    continue
+  fi
+  if [[ -z "$domain_level" ]]; then
+    domain_level="$PROFILE_OVERALL"
+  fi
+  DOMAIN_MAP["$domain_key"]="$domain_level"
+done
+
 {
-  if ($0 ~ /^\[mcp_servers\.codex-troller\]$/) {
-    skip = 1
-    next
-  }
-  if (skip == 1 && $0 ~ /^\[/) {
-    skip = 0
-  }
-  if (skip == 0) {
-    print $0
-  }
-}
-' "$CONFIG_PATH" >"$TMP_FILE"
+  echo "{"
+  echo "  \"overall\": \"${PROFILE_OVERALL}\","
+  echo "  \"response_need\": \"${PROFILE_RESPONSE_NEED}\","
+  echo "  \"technical_depth\": \"${PROFILE_TECHNICAL_DEPTH}\","
+  echo "  \"domain_knowledge\": {"
+  idx=0
+  total="${#DOMAIN_MAP[@]}"
+  for key in "${!DOMAIN_MAP[@]}"; do
+    idx=$((idx + 1))
+    comma=","
+    if [[ "$idx" -ge "$total" ]]; then
+      comma=""
+    fi
+    echo "    \"${key}\": \"${DOMAIN_MAP[$key]}\"${comma}"
+  done
+  echo "  }"
+  echo "}"
+} >"$PROFILE_PATH"
 
-mv "$TMP_FILE" "$CONFIG_PATH"
+mkdir -p "$(dirname "$LAUNCHER_PATH")"
+cat >"$LAUNCHER_PATH" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export CODEX_TROLLER_DEFAULT_PROFILE_PATH="$PROFILE_PATH"
+exec "$BIN_PATH"
+EOF
+chmod +x "$LAUNCHER_PATH"
+
+strip_mcp_section "$CONFIG_PATH" "mcp_servers.codex-troller"
+strip_mcp_section "$CONFIG_PATH" "mcp_servers.playwright"
 
 {
   echo
   echo "[mcp_servers.codex-troller]"
-  echo "command = \"$BIN_PATH\""
+  echo "command = \"$LAUNCHER_PATH\""
 } >>"$CONFIG_PATH"
+
+if [[ "$PLAYWRIGHT_CONSENT" == "yes" ]]; then
+  if ! command -v npx >/dev/null 2>&1; then
+    echo "[agent-install] warning: npx not found. Playwright MCP was registered but requires Node.js+npx at runtime."
+  fi
+  {
+    echo
+    echo "[mcp_servers.playwright]"
+    echo 'command = "npx"'
+    echo 'args = ["-y", "@playwright/mcp@latest"]'
+  } >>"$CONFIG_PATH"
+fi
 
 if ! grep -q '^\[mcp_servers\.codex-troller\]$' "$CONFIG_PATH"; then
   echo "[agent-install] failed to write MCP section" >&2
   exit 1
 fi
 
-if ! grep -q "^command = \"$BIN_PATH\"$" "$CONFIG_PATH"; then
+if ! grep -q "^command = \"$LAUNCHER_PATH\"$" "$CONFIG_PATH"; then
   echo "[agent-install] failed to write command path" >&2
   exit 1
 fi
@@ -66,6 +337,23 @@ mkdir -p "$(dirname "$SKILL_DST")"
 rm -rf "$SKILL_DST"
 cp -R "$SKILL_SRC" "$SKILL_DST"
 
+CONSENT_LOG="$CODEX_HOME_PATH/codex-troller/install-consent.log"
+mkdir -p "$(dirname "$CONSENT_LOG")"
+{
+  echo "timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  echo "scope: $INSTALL_SCOPE"
+  echo "terms_accepted: $TERMS_CONSENT"
+  echo "playwright_mcp: $PLAYWRIGHT_CONSENT"
+  echo "profile_path: $PROFILE_PATH"
+} >"$CONSENT_LOG"
+
 echo "[agent-install] done"
 echo "[agent-install] registered mcp_servers.codex-troller"
+if [[ "$PLAYWRIGHT_CONSENT" == "yes" ]]; then
+  echo "[agent-install] registered mcp_servers.playwright"
+fi
 echo "[agent-install] installed skill: codex-troller-autostart"
+echo "[agent-install] wrote default user profile: $PROFILE_PATH"
+if [[ "$INSTALL_SCOPE" == "local" ]]; then
+  echo "[agent-install] local scope selected. Run Codex with CODEX_HOME=\"$CODEX_HOME_PATH\" to use this local installation."
+fi

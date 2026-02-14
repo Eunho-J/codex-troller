@@ -18,6 +18,7 @@ type councilStore struct {
 
 type councilRoleState struct {
 	Role           string `json:"role"`
+	Domain         string `json:"domain"`
 	Model          string `json:"model"`
 	BriefSubmitted bool   `json:"brief_submitted"`
 	Priority       string `json:"priority"`
@@ -41,24 +42,6 @@ type councilMessage struct {
 	Action    string    `json:"action"`
 	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"created_at"`
-}
-
-var councilRoleOrder = []string{
-	"ux_director",
-	"frontend_lead",
-	"backend_lead",
-	"db_lead",
-	"asset_manager",
-	"security_manager",
-}
-
-func isCouncilRole(role string) bool {
-	for _, item := range councilRoleOrder {
-		if item == role {
-			return true
-		}
-	}
-	return false
 }
 
 func newCouncilStore(path string) (*councilStore, error) {
@@ -91,6 +74,7 @@ func (c *councilStore) initSchema() error {
 		`CREATE TABLE IF NOT EXISTS council_roles (
 			session_id TEXT NOT NULL,
 			role TEXT NOT NULL,
+			domain TEXT NOT NULL DEFAULT 'general',
 			model TEXT NOT NULL,
 			brief TEXT NOT NULL DEFAULT '',
 			priority TEXT NOT NULL DEFAULT '',
@@ -157,7 +141,45 @@ func (c *councilStore) initSchema() error {
 			return err
 		}
 	}
+	if err := c.ensureRoleDomainColumn(); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (c *councilStore) ensureRoleDomainColumn() error {
+	rows, err := c.db.Query(`PRAGMA table_info(council_roles)`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasDomain := false
+	for rows.Next() {
+		var (
+			cid       int
+			name      string
+			colType   string
+			notNull   int
+			defaultV  sql.NullString
+			primaryPK int
+		)
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &defaultV, &primaryPK); err != nil {
+			return err
+		}
+		if name == "domain" {
+			hasDomain = true
+			break
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if hasDomain {
+		return nil
+	}
+	_, err = c.db.Exec(`ALTER TABLE council_roles ADD COLUMN domain TEXT NOT NULL DEFAULT 'general'`)
+	return err
 }
 
 func nowRFC3339() string {
@@ -190,7 +212,42 @@ func modelForCouncilRole(role string, routing AgentRoutingPolicy) string {
 	return routing.OrchestratorModel
 }
 
-func (c *councilStore) startBriefing(sessionID string, routing AgentRoutingPolicy, intent Intent) ([]councilRoleState, []councilTopic, error) {
+func loadRoleNames(rows *sql.Rows) ([]string, error) {
+	out := []string{}
+	for rows.Next() {
+		var role string
+		if err := rows.Scan(&role); err != nil {
+			return nil, err
+		}
+		out = append(out, role)
+	}
+	return out, rows.Err()
+}
+
+func (c *councilStore) loadSessionRoles(sessionID string) ([]string, error) {
+	rows, err := c.db.Query(`SELECT role FROM council_roles WHERE session_id=? ORDER BY role`, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return loadRoleNames(rows)
+}
+
+func (c *councilStore) hasSessionRole(sessionID, role string) (bool, error) {
+	var count int
+	if err := c.db.QueryRow(
+		`SELECT COUNT(*) FROM council_roles WHERE session_id=? AND role=?`,
+		sessionID, strings.TrimSpace(role),
+	).Scan(&count); err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (c *councilStore) startBriefing(sessionID string, routing AgentRoutingPolicy, intent Intent, managers []CouncilManager) ([]councilRoleState, []councilTopic, error) {
+	if len(managers) == 0 {
+		return nil, nil, fmt.Errorf("at least one manager role is required")
+	}
 	tx, err := c.db.Begin()
 	if err != nil {
 		return nil, nil, err
@@ -211,15 +268,32 @@ func (c *councilStore) startBriefing(sessionID string, routing AgentRoutingPolic
 		return nil, nil, err
 	}
 
-	for _, role := range councilRoleOrder {
+	if _, err = tx.Exec(`DELETE FROM council_roles WHERE session_id=?`, sessionID); err != nil {
+		return nil, nil, err
+	}
+	roleNames := make([]string, 0, len(managers))
+	for _, manager := range managers {
+		role := strings.TrimSpace(manager.Role)
+		if role == "" {
+			continue
+		}
+		domain := strings.TrimSpace(manager.Domain)
+		if domain == "" {
+			domain = "general"
+		}
+		model := strings.TrimSpace(manager.Model)
+		if model == "" {
+			model = modelForCouncilRole(role, routing)
+		}
 		if _, err = tx.Exec(
-			`INSERT INTO council_roles(session_id,role,model)
-			 VALUES(?,?,?)
-			 ON CONFLICT(session_id,role) DO UPDATE SET model=excluded.model`,
-			sessionID, role, modelForCouncilRole(role, routing),
+			`INSERT INTO council_roles(session_id,role,domain,model)
+			 VALUES(?,?,?,?)
+			 ON CONFLICT(session_id,role) DO UPDATE SET domain=excluded.domain, model=excluded.model`,
+			sessionID, role, domain, model,
 		); err != nil {
 			return nil, nil, err
 		}
+		roleNames = append(roleNames, role)
 	}
 
 	defaultTopics := []struct {
@@ -228,7 +302,7 @@ func (c *councilStore) startBriefing(sessionID string, routing AgentRoutingPolic
 		Detail string
 	}{
 		{"ux_definition", "User Experience Definition", fmt.Sprintf("Goal: %s", strings.TrimSpace(intent.Goal))},
-		{"architecture_split", "Implementation Responsibility Split", "Lock responsibility boundaries across frontend/backend/db/assets/security"},
+		{"architecture_split", "Implementation Responsibility Split", fmt.Sprintf("Lock role boundaries across active managers: %s", strings.Join(roleNames, ", "))},
 		{"asset_strategy", "Asset Management Strategy", "Define git + local footprint based resume/trace strategy"},
 		{"security_boundary", "Security/Permission Boundary", "Lock no-auto-execution zones and approval-required zones"},
 	}
@@ -355,7 +429,11 @@ func (c *councilStore) upsertConsultProposal(sessionID string, proposal ConsultP
 
 func (c *councilStore) submitBrief(sessionID, role, priority, contribution, quickDecisions string, topicProposals []string) error {
 	role = strings.TrimSpace(role)
-	if !isCouncilRole(role) {
+	exists, err := c.hasSessionRole(sessionID, role)
+	if err != nil {
+		return err
+	}
+	if !exists {
 		return fmt.Errorf("unknown role: %s", role)
 	}
 	now := nowRFC3339()
@@ -472,7 +550,11 @@ func (c *councilStore) summarizeBriefs(sessionID string) (string, []councilTopic
 
 func (c *councilStore) requestFloor(sessionID, role string, topicID int64, reason string) (int64, error) {
 	role = strings.TrimSpace(role)
-	if !isCouncilRole(role) {
+	exists, err := c.hasSessionRole(sessionID, role)
+	if err != nil {
+		return 0, err
+	}
+	if !exists {
 		return 0, fmt.Errorf("unknown role: %s", role)
 	}
 	var topicStatus string
@@ -572,8 +654,17 @@ func (c *councilStore) publishStatement(sessionID string, requestID int64, conte
 		return 0, nil, err
 	}
 
+	roleRows, rerr := tx.Query(`SELECT role FROM council_roles WHERE session_id=? ORDER BY role`, sessionID)
+	if rerr != nil {
+		return 0, nil, rerr
+	}
+	roleNames, rerr := loadRoleNames(roleRows)
+	_ = roleRows.Close()
+	if rerr != nil {
+		return 0, nil, rerr
+	}
 	waitingRoles := []string{}
-	for _, r := range councilRoleOrder {
+	for _, r := range roleNames {
 		decision := "pending"
 		if r == role {
 			decision = "pass"
@@ -601,7 +692,11 @@ func (c *councilStore) respondTopic(sessionID string, topicID int64, role, decis
 		return false, nil, fmt.Errorf("invalid decision: %s", decision)
 	}
 	role = strings.TrimSpace(role)
-	if !isCouncilRole(role) {
+	exists, err := c.hasSessionRole(sessionID, role)
+	if err != nil {
+		return false, nil, err
+	}
+	if !exists {
 		return false, nil, fmt.Errorf("unknown role: %s", role)
 	}
 	var topicStatus string
@@ -634,6 +729,15 @@ func (c *councilStore) respondTopic(sessionID string, topicID int64, role, decis
 		return false, nil, err
 	}
 
+	sessionRoles, err := c.loadSessionRoles(sessionID)
+	if err != nil {
+		return false, nil, err
+	}
+	roleSet := map[string]struct{}{}
+	for _, item := range sessionRoles {
+		roleSet[item] = struct{}{}
+	}
+
 	rows, err := c.db.Query(
 		`SELECT role, decision FROM council_topic_votes WHERE session_id=? AND topic_id=?`,
 		sessionID, topicID,
@@ -644,7 +748,7 @@ func (c *councilStore) respondTopic(sessionID string, topicID int64, role, decis
 	defer rows.Close()
 
 	pending := map[string]struct{}{}
-	for _, r := range councilRoleOrder {
+	for _, r := range sessionRoles {
 		pending[r] = struct{}{}
 	}
 	raiseCount := 0
@@ -652,6 +756,9 @@ func (c *councilStore) respondTopic(sessionID string, topicID int64, role, decis
 		var r, d string
 		if err := rows.Scan(&r, &d); err != nil {
 			return false, nil, err
+		}
+		if _, ok := roleSet[r]; !ok {
+			continue
 		}
 		delete(pending, r)
 		if d == "pending" {
@@ -665,7 +772,7 @@ func (c *councilStore) respondTopic(sessionID string, topicID int64, role, decis
 		return false, nil, err
 	}
 	pendingRoles := []string{}
-	for _, r := range councilRoleOrder {
+	for _, r := range sessionRoles {
 		if _, ok := pending[r]; ok {
 			pendingRoles = append(pendingRoles, r)
 		}
@@ -695,11 +802,23 @@ func (c *councilStore) closeTopic(sessionID string, topicID int64) (int, error) 
 	}
 	defer rows.Close()
 
+	sessionRoles, err := c.loadSessionRoles(sessionID)
+	if err != nil {
+		return 0, err
+	}
+	roleSet := map[string]struct{}{}
+	for _, item := range sessionRoles {
+		roleSet[item] = struct{}{}
+	}
+
 	seen := map[string]bool{}
 	for rows.Next() {
 		var role, decision string
 		if err := rows.Scan(&role, &decision); err != nil {
 			return 0, err
+		}
+		if _, ok := roleSet[role]; !ok {
+			continue
 		}
 		if decision != "pass" {
 			return 0, fmt.Errorf("topic %d cannot close: role %s decision=%s", topicID, role, decision)
@@ -709,7 +828,7 @@ func (c *councilStore) closeTopic(sessionID string, topicID int64) (int, error) 
 	if err := rows.Err(); err != nil {
 		return 0, err
 	}
-	if len(seen) < len(councilRoleOrder) {
+	if len(seen) < len(sessionRoles) {
 		return 0, fmt.Errorf("topic %d cannot close: not all roles responded", topicID)
 	}
 
@@ -766,7 +885,7 @@ func (c *councilStore) finalizeConsensus(sessionID string) error {
 
 func (c *councilStore) loadRoles(sessionID string) ([]councilRoleState, error) {
 	rows, err := c.db.Query(
-		`SELECT role, model, brief_submitted, priority, contribution, quick_decisions
+		`SELECT role, domain, model, brief_submitted, priority, contribution, quick_decisions
 		 FROM council_roles WHERE session_id=? ORDER BY role`,
 		sessionID,
 	)
@@ -778,7 +897,7 @@ func (c *councilStore) loadRoles(sessionID string) ([]councilRoleState, error) {
 	for rows.Next() {
 		var item councilRoleState
 		var submitted int
-		if err := rows.Scan(&item.Role, &item.Model, &submitted, &item.Priority, &item.Contribution, &item.QuickDecisions); err != nil {
+		if err := rows.Scan(&item.Role, &item.Domain, &item.Model, &submitted, &item.Priority, &item.Contribution, &item.QuickDecisions); err != nil {
 			return nil, err
 		}
 		item.BriefSubmitted = submitted == 1

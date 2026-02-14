@@ -193,12 +193,52 @@ func toolListResponse() map[string]any {
 				},
 			),
 			newTool(
+				"council_configure_team",
+				"Configure manager roster for council (append/replace/remove dynamic roles)",
+				map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"session_id": map[string]any{"type": "string"},
+						"mode":       map[string]any{"type": "string", "enum": []string{"append", "replace", "remove"}},
+						"managers": map[string]any{
+							"type": "array",
+							"items": map[string]any{
+								"type": "object",
+								"properties": map[string]any{
+									"role":   map[string]any{"type": "string"},
+									"domain": map[string]any{"type": "string"},
+									"model":  map[string]any{"type": "string"},
+								},
+								"required": []string{"role"},
+							},
+						},
+					},
+					"required": []string{"session_id", "mode", "managers"},
+				},
+			),
+			newTool(
 				"council_start_briefing",
 				"Start manager council parallel briefing round",
 				map[string]any{
 					"type": "object",
 					"properties": map[string]any{
 						"session_id": map[string]any{"type": "string"},
+						"manager_mode": map[string]any{
+							"type": "string",
+							"enum": []string{"append", "replace", "remove"},
+						},
+						"managers": map[string]any{
+							"type": "array",
+							"items": map[string]any{
+								"type": "object",
+								"properties": map[string]any{
+									"role":   map[string]any{"type": "string"},
+									"domain": map[string]any{"type": "string"},
+									"model":  map[string]any{"type": "string"},
+								},
+								"required": []string{"role"},
+							},
+						},
 					},
 					"required": []string{"session_id"},
 				},
@@ -700,6 +740,178 @@ func answersToText(answers map[string]any) string {
 	return strings.Join(lines, "\n")
 }
 
+func normalizeCouncilRoleID(raw string) string {
+	trimmed := strings.ToLower(strings.TrimSpace(raw))
+	if trimmed == "" {
+		return ""
+	}
+	var b strings.Builder
+	lastUnderscore := false
+	for _, r := range trimmed {
+		switch {
+		case unicode.IsLetter(r) || unicode.IsDigit(r):
+			b.WriteRune(r)
+			lastUnderscore = false
+		case r == '_' || r == '-' || unicode.IsSpace(r) || r == '/':
+			if !lastUnderscore {
+				b.WriteRune('_')
+				lastUnderscore = true
+			}
+		}
+	}
+	normalized := strings.Trim(b.String(), "_")
+	return normalized
+}
+
+func inferCouncilDomain(role string) string {
+	v := strings.ToLower(strings.TrimSpace(role))
+	switch {
+	case containsAny(v, "ux", "ui", "frontend", "front_end", "web", "mobile", "design"):
+		return "frontend"
+	case containsAny(v, "backend", "server", "api", "service"):
+		return "backend"
+	case containsAny(v, "db", "data", "database", "storage", "etl"):
+		return "db"
+	case containsAny(v, "security", "auth", "permission", "compliance", "privacy"):
+		return "security"
+	case containsAny(v, "asset", "content", "media", "knowledge", "catalog"):
+		return "asset"
+	case containsAny(v, "ml", "ai", "llm", "model", "inference", "training", "vector"):
+		return "ai_ml"
+	case containsAny(v, "platform", "infra", "devops", "sre", "ops"):
+		return "platform"
+	default:
+		return "general"
+	}
+}
+
+func normalizeCouncilDomain(raw, role string) string {
+	v := strings.ToLower(strings.TrimSpace(raw))
+	switch v {
+	case "frontend", "backend", "db", "security", "asset", "ai_ml", "platform", "general":
+		return v
+	}
+	return inferCouncilDomain(role)
+}
+
+func buildDefaultCouncilManagers(routing AgentRoutingPolicy) []CouncilManager {
+	model := strings.TrimSpace(routing.OrchestratorModel)
+	if model == "" {
+		model = "gpt-5.3-codex"
+	}
+	return []CouncilManager{
+		{Role: "ux_director", Domain: "frontend", Model: model},
+		{Role: "frontend_lead", Domain: "frontend", Model: model},
+		{Role: "backend_lead", Domain: "backend", Model: model},
+		{Role: "db_lead", Domain: "db", Model: model},
+		{Role: "asset_manager", Domain: "asset", Model: model},
+		{Role: "security_manager", Domain: "security", Model: model},
+	}
+}
+
+func normalizeCouncilManagers(list []CouncilManager, routing AgentRoutingPolicy) []CouncilManager {
+	modelFallback := strings.TrimSpace(routing.OrchestratorModel)
+	if modelFallback == "" {
+		modelFallback = "gpt-5.3-codex"
+	}
+	out := make([]CouncilManager, 0, len(list))
+	seen := map[string]struct{}{}
+	for _, item := range list {
+		role := normalizeCouncilRoleID(item.Role)
+		if role == "" {
+			continue
+		}
+		if _, ok := seen[role]; ok {
+			continue
+		}
+		seen[role] = struct{}{}
+		domain := normalizeCouncilDomain(item.Domain, role)
+		model := strings.TrimSpace(item.Model)
+		if model == "" {
+			model = modelFallback
+		}
+		out = append(out, CouncilManager{
+			Role:   role,
+			Domain: domain,
+			Model:  model,
+		})
+	}
+	return out
+}
+
+func ensureCouncilManagerDefaults(session *SessionState) {
+	ensureRoutingPolicyDefaults(session)
+	if len(session.CouncilManagers) == 0 {
+		session.CouncilManagers = buildDefaultCouncilManagers(session.RoutingPolicy)
+		return
+	}
+	normalized := normalizeCouncilManagers(session.CouncilManagers, session.RoutingPolicy)
+	if len(normalized) == 0 {
+		session.CouncilManagers = buildDefaultCouncilManagers(session.RoutingPolicy)
+		return
+	}
+	session.CouncilManagers = normalized
+}
+
+func updateCouncilManagers(session *SessionState, mode string, incoming []CouncilManager) ([]CouncilManager, error) {
+	ensureCouncilManagerDefaults(session)
+	normalizedIncoming := normalizeCouncilManagers(incoming, session.RoutingPolicy)
+	if len(normalizedIncoming) == 0 {
+		return nil, fmt.Errorf("at least one valid manager role is required")
+	}
+
+	normalizedMode := strings.ToLower(strings.TrimSpace(mode))
+	if normalizedMode == "" {
+		normalizedMode = "append"
+	}
+	switch normalizedMode {
+	case "append", "replace", "remove":
+	default:
+		return nil, fmt.Errorf("invalid mode: %s", mode)
+	}
+
+	current := append([]CouncilManager{}, session.CouncilManagers...)
+	if normalizedMode == "replace" {
+		session.CouncilManagers = normalizedIncoming
+		return session.CouncilManagers, nil
+	}
+
+	index := map[string]int{}
+	for i, item := range current {
+		index[item.Role] = i
+	}
+
+	if normalizedMode == "append" {
+		for _, item := range normalizedIncoming {
+			if pos, ok := index[item.Role]; ok {
+				current[pos] = item
+				continue
+			}
+			index[item.Role] = len(current)
+			current = append(current, item)
+		}
+		session.CouncilManagers = current
+		return session.CouncilManagers, nil
+	}
+
+	removeSet := map[string]struct{}{}
+	for _, item := range normalizedIncoming {
+		removeSet[item.Role] = struct{}{}
+	}
+	next := make([]CouncilManager, 0, len(current))
+	for _, item := range current {
+		if _, ok := removeSet[item.Role]; ok {
+			continue
+		}
+		next = append(next, item)
+	}
+	if len(next) == 0 {
+		return nil, fmt.Errorf("cannot remove all managers; keep at least one role")
+	}
+	session.CouncilManagers = next
+	return session.CouncilManagers, nil
+}
+
 func ensureVisualReviewDefaults(session *SessionState) {
 	if session.AvailableMCPs == nil {
 		session.AvailableMCPs = []string{}
@@ -1027,6 +1239,13 @@ func parseUserProfileAny(v any) userProfileInput {
 	return out
 }
 
+func isEmptyUserProfileInput(input userProfileInput) bool {
+	return strings.TrimSpace(input.Overall) == "" &&
+		strings.TrimSpace(input.ResponseNeed) == "" &&
+		strings.TrimSpace(input.TechnicalDepth) == "" &&
+		len(input.DomainKnowledge) == 0
+}
+
 func inferAndSetUserProfile(session *SessionState, rawIntent string) {
 	ensureUserProfileDefaults(session)
 	if session.UserProfile.Overall == "unknown" {
@@ -1109,6 +1328,9 @@ func (s *MCPServer) toolStartInterview(raw json.RawMessage) (any, error) {
 	session := s.getOrCreateSession(args.SessionID)
 	updateConsultantLanguage(session, args.RawIntent)
 	mergeMCPInventory(session, args.AvailableMCPs, args.AvailableMCPTools)
+	if isEmptyUserProfileInput(args.UserProfile) {
+		s.applyDefaultUserProfile(session, "start_interview.default_profile")
+	}
 	mergeUserProfile(session, args.UserProfile, "start_interview.input")
 	hasExistingContext := args.SessionID != "" && (session.Intent.Raw != "" || session.Plan != nil || len(session.StepHistory) > 1 || session.Step != StepReceived)
 	if hasExistingContext && strings.TrimSpace(args.RawIntent) == "" {
@@ -1216,6 +1438,9 @@ func (s *MCPServer) toolIngestIntent(raw json.RawMessage) (any, error) {
 	session := s.getOrCreateSession(args.SessionID)
 	updateConsultantLanguage(session, args.RawIntent)
 	mergeMCPInventory(session, args.AvailableMCPs, args.AvailableMCPTools)
+	if isEmptyUserProfileInput(args.UserProfile) {
+		s.applyDefaultUserProfile(session, "ingest_intent.default_profile")
+	}
 	mergeUserProfile(session, args.UserProfile, "ingest_intent.input")
 	resetWorkflowState(session)
 	if s.council != nil {
@@ -2911,6 +3136,7 @@ func (s *MCPServer) toolGetSessionStatus(raw json.RawMessage) (any, error) {
 		"baseline_footprint":  session.BaselineFootprint,
 		"last_footprint":      session.LastFootprint,
 		"routing_policy":      session.RoutingPolicy,
+		"council_managers":    session.CouncilManagers,
 		"user_profile":        session.UserProfile,
 		"consultant_lang":     session.ConsultantLang,
 		"available_mcps":      session.AvailableMCPs,
@@ -3065,25 +3291,68 @@ func (s *MCPServer) toolGetAgentRoutingPolicy(raw json.RawMessage) (any, error) 
 	}, nil
 }
 
-func councilRoleDomain(role string) string {
-	switch strings.ToLower(strings.TrimSpace(role)) {
-	case "ux_director", "frontend_lead":
-		return "frontend"
-	case "backend_lead":
-		return "backend"
-	case "db_lead":
-		return "db"
-	case "security_manager":
-		return "security"
-	case "asset_manager":
-		return "asset"
-	default:
-		return "general"
+func (s *MCPServer) toolCouncilConfigureTeam(raw json.RawMessage) (any, error) {
+	var args struct {
+		SessionID string `json:"session_id"`
+		Mode      string `json:"mode"`
+		Managers  []struct {
+			Role   string `json:"role"`
+			Domain string `json:"domain"`
+			Model  string `json:"model"`
+		} `json:"managers"`
 	}
+	if err := json.Unmarshal(raw, &args); err != nil {
+		return nil, err
+	}
+	session := s.getOrCreateSession(args.SessionID)
+	mode := strings.ToLower(strings.TrimSpace(args.Mode))
+	if mode == "" {
+		mode = "append"
+	}
+	managers := make([]CouncilManager, 0, len(args.Managers))
+	for _, item := range args.Managers {
+		managers = append(managers, CouncilManager{
+			Role:   item.Role,
+			Domain: item.Domain,
+			Model:  item.Model,
+		})
+	}
+	updated, err := updateCouncilManagers(session, mode, managers)
+	if err != nil {
+		return nil, err
+	}
+	if session.CouncilPhase != "" {
+		session.CouncilConsensus = false
+		session.CouncilPhase = "team_updated"
+	}
+	session.UpdatedAt = time.Now().UTC()
+	return map[string]any{
+		"session_id":        session.SessionID,
+		"mode":              mode,
+		"council_managers":  updated,
+		"council_phase":     session.CouncilPhase,
+		"council_consensus": session.CouncilConsensus,
+		"next_step":         "council_start_briefing",
+	}, nil
+}
+
+func councilRoleDomain(role string) string {
+	return inferCouncilDomain(role)
+}
+
+func councilRoleDomainForSession(session *SessionState, role string) string {
+	ensureCouncilManagerDefaults(session)
+	normalized := normalizeCouncilRoleID(role)
+	for _, item := range session.CouncilManagers {
+		if item.Role == normalized {
+			return normalizeCouncilDomain(item.Domain, item.Role)
+		}
+	}
+	return councilRoleDomain(role)
 }
 
 func councilAutonomyPolicy(session *SessionState, role string) (string, string, string) {
-	domain := councilRoleDomain(role)
+	domain := councilRoleDomainForSession(session, role)
 	if isLowConfidenceProfile(session) {
 		return "balanced", "balanced", "Low confidence in expertise inference: avoid aggressive autonomy, expose assumptions/risks, and surface checkpoints first"
 	}
@@ -3103,12 +3372,32 @@ func (s *MCPServer) toolCouncilStartBriefing(raw json.RawMessage) (any, error) {
 		return nil, fmt.Errorf("council store is not available")
 	}
 	var args struct {
-		SessionID string `json:"session_id"`
+		SessionID   string `json:"session_id"`
+		ManagerMode string `json:"manager_mode"`
+		Managers    []struct {
+			Role   string `json:"role"`
+			Domain string `json:"domain"`
+			Model  string `json:"model"`
+		} `json:"managers"`
 	}
 	if err := json.Unmarshal(raw, &args); err != nil {
 		return nil, err
 	}
 	session := s.getOrCreateSession(args.SessionID)
+	if len(args.Managers) > 0 {
+		managers := make([]CouncilManager, 0, len(args.Managers))
+		for _, item := range args.Managers {
+			managers = append(managers, CouncilManager{
+				Role:   item.Role,
+				Domain: item.Domain,
+				Model:  item.Model,
+			})
+		}
+		if _, err := updateCouncilManagers(session, args.ManagerMode, managers); err != nil {
+			return nil, err
+		}
+	}
+	ensureCouncilManagerDefaults(session)
 	if session.Step != StepIntentCaptured {
 		return nil, fmt.Errorf("council_start_briefing requires intent_captured state")
 	}
@@ -3116,7 +3405,7 @@ func (s *MCPServer) toolCouncilStartBriefing(raw json.RawMessage) (any, error) {
 		return nil, fmt.Errorf("council_start_briefing requires goal; continue clarify_intent first")
 	}
 
-	roles, topics, err := s.council.startBriefing(session.SessionID, session.RoutingPolicy, session.Intent)
+	roles, topics, err := s.council.startBriefing(session.SessionID, session.RoutingPolicy, session.Intent, session.CouncilManagers)
 	if err != nil {
 		return nil, err
 	}
@@ -3141,13 +3430,14 @@ func (s *MCPServer) toolCouncilStartBriefing(raw json.RawMessage) (any, error) {
 	}
 
 	return map[string]any{
-		"session_id":    session.SessionID,
-		"phase":         session.CouncilPhase,
-		"next_step":     "council_submit_brief",
-		"roles":         roles,
-		"topics":        topics,
-		"brief_prompts": briefPrompts,
-		"user_profile":  session.UserProfile,
+		"session_id":       session.SessionID,
+		"phase":            session.CouncilPhase,
+		"next_step":        "council_submit_brief",
+		"roles":            roles,
+		"council_managers": session.CouncilManagers,
+		"topics":           topics,
+		"brief_prompts":    briefPrompts,
+		"user_profile":     session.UserProfile,
 	}, nil
 }
 
@@ -3420,15 +3710,17 @@ func (s *MCPServer) toolCouncilGetStatus(raw json.RawMessage) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	session := s.getOrCreateSession(args.SessionID)
 	return map[string]any{
-		"session_id": args.SessionID,
-		"status":     status,
-		"phase":      phase,
-		"summary":    summary,
-		"roles":      roles,
-		"topics":     topics,
-		"messages":   messages,
-		"proposals":  proposals,
+		"session_id":       args.SessionID,
+		"status":           status,
+		"phase":            phase,
+		"summary":          summary,
+		"roles":            roles,
+		"council_managers": session.CouncilManagers,
+		"topics":           topics,
+		"messages":         messages,
+		"proposals":        proposals,
 	}, nil
 }
 

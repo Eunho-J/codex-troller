@@ -26,6 +26,7 @@ Purpose: start a full task lifecycle with interview-first behavior by calling th
    - `success_criteria: ...`
 4. Call workflow tools in order:
    - `ingest_intent`
+   - Optional: `council_configure_team` when project needs role composition changes
    - `council_start_briefing`
    - `council_submit_brief` (all roles submit independently)
    - `council_summarize_briefs`

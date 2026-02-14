@@ -21,14 +21,17 @@ type Config struct {
 	Logger           *slog.Logger
 	StatePath        string
 	DiscussionDBPath string
+	DefaultProfile   string
 }
 
 type MCPServer struct {
-	cfg      Config
-	mu       sync.Mutex
-	sessions map[string]*SessionState
-	council  *councilStore
-	logger   *slog.Logger
+	cfg                Config
+	mu                 sync.Mutex
+	sessions           map[string]*SessionState
+	council            *councilStore
+	logger             *slog.Logger
+	defaultUserProfile userProfileInput
+	hasDefaultProfile  bool
 }
 
 func NewMCPServer(cfg Config) *MCPServer {
@@ -53,11 +56,20 @@ func NewMCPServer(cfg Config) *MCPServer {
 	if srv.cfg.DiscussionDBPath == "" {
 		srv.cfg.DiscussionDBPath = filepath.Join(filepath.Dir(srv.cfg.StatePath), "council.db")
 	}
+	if srv.cfg.DefaultProfile == "" {
+		srv.cfg.DefaultProfile = filepath.Join(filepath.Dir(srv.cfg.StatePath), "default_user_profile.json")
+	}
 	store, err := newCouncilStore(srv.cfg.DiscussionDBPath)
 	if err != nil {
 		srv.logger.Error("failed to initialize council store", "error", err)
 	} else {
 		srv.council = store
+	}
+	if profile, ok, err := loadDefaultUserProfile(srv.cfg.DefaultProfile); err != nil {
+		srv.logger.Warn("failed to load default user profile", "path", srv.cfg.DefaultProfile, "error", err)
+	} else if ok {
+		srv.defaultUserProfile = profile
+		srv.hasDefaultProfile = true
 	}
 	_ = srv.loadSessions()
 	return srv
@@ -312,6 +324,7 @@ func (s *MCPServer) getOrCreateSession(id string) *SessionState {
 			session.TopicDecisions = map[string]string{}
 		}
 		ensureRoutingPolicyDefaults(session)
+		ensureCouncilManagerDefaults(session)
 		ensureConsultantLanguageDefaults(session)
 		ensureVisualReviewDefaults(session)
 		return session
@@ -353,6 +366,8 @@ func (s *MCPServer) handleTool(call toolCallRequest) (any, error) {
 		return s.toolSetAgentRoutingPolicy(call.Arguments)
 	case "get_agent_routing_policy":
 		return s.toolGetAgentRoutingPolicy(call.Arguments)
+	case "council_configure_team":
+		return s.toolCouncilConfigureTeam(call.Arguments)
 	case "council_start_briefing":
 		return s.toolCouncilStartBriefing(call.Arguments)
 	case "council_submit_brief":
@@ -401,6 +416,32 @@ func mustJSON(v any) string {
 	return string(raw)
 }
 
+func loadDefaultUserProfile(path string) (userProfileInput, bool, error) {
+	if strings.TrimSpace(path) == "" {
+		return userProfileInput{}, false, nil
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return userProfileInput{}, false, nil
+		}
+		return userProfileInput{}, false, err
+	}
+	var profile userProfileInput
+	if err := json.Unmarshal(raw, &profile); err != nil {
+		return userProfileInput{}, false, err
+	}
+	return profile, true, nil
+}
+
+func (s *MCPServer) applyDefaultUserProfile(session *SessionState, source string) bool {
+	if !s.hasDefaultProfile {
+		return false
+	}
+	mergeUserProfile(session, s.defaultUserProfile, source)
+	return true
+}
+
 func (s *MCPServer) loadSessions() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -430,6 +471,7 @@ func (s *MCPServer) loadSessions() error {
 			session.TopicDecisions = map[string]string{}
 		}
 		ensureRoutingPolicyDefaults(session)
+		ensureCouncilManagerDefaults(session)
 		ensureConsultantLanguageDefaults(session)
 		ensureVisualReviewDefaults(session)
 	}

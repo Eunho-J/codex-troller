@@ -74,6 +74,12 @@ type AgentRoutingPolicy struct {
 	WorkerModel          string `json:"worker_model"`
 }
 
+type CouncilManager struct {
+	Role   string `json:"role"`
+	Domain string `json:"domain"`
+	Model  string `json:"model"`
+}
+
 type UserKnowledgeProfile struct {
 	Overall         string            `json:"overall"`
 	DomainKnowledge map[string]string `json:"domain_knowledge"`
@@ -133,6 +139,7 @@ type SessionState struct {
 	LastFootprint     RepoFootprint        `json:"last_footprint"`
 	ReconcileNeeded   bool                 `json:"reconcile_needed"`
 	RoutingPolicy     AgentRoutingPolicy   `json:"routing_policy"`
+	CouncilManagers   []CouncilManager     `json:"council_managers"`
 	UserProfile       UserKnowledgeProfile `json:"user_profile"`
 	ConsultantLang    string               `json:"consultant_lang"`
 	AvailableMCPs     []string             `json:"available_mcps"`
@@ -158,6 +165,14 @@ func NewSession() *SessionState {
 			OrchestratorModel:    "gpt-5.3-codex",
 			ReviewerModel:        "gpt-5.3-codex",
 			WorkerModel:          "gpt-5.3-codex-spark",
+		},
+		CouncilManagers: []CouncilManager{
+			{Role: "ux_director", Domain: "frontend"},
+			{Role: "frontend_lead", Domain: "frontend"},
+			{Role: "backend_lead", Domain: "backend"},
+			{Role: "db_lead", Domain: "db"},
+			{Role: "asset_manager", Domain: "asset"},
+			{Role: "security_manager", Domain: "security"},
 		},
 		UserProfile: UserKnowledgeProfile{
 			Overall:         "unknown",

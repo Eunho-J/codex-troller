@@ -568,3 +568,26 @@
 - 상태/재개:
   - `visual_review` 상태(`required`, `status`, `artifacts`, `findings`, `ux_director_summary`)를 세션에 저장.
   - `record_user_feedback`는 Visual Reviewer 미완료 시 차단.
+
+## 최신 반영(2026-02-14, 동적 팀장 구성/참여)
+
+- 세션별 팀장 roster(`council_managers`) 도입:
+  - 기본 팀장을 유지하되, 프로젝트 특성에 따라 역할을 동적으로 추가/교체/제거 가능.
+  - 역할/도메인/모델을 함께 저장하고, 세션 재개 시 동일 구성을 유지.
+- 신규 도구:
+  - `council_configure_team` (`append|replace|remove`)로 팀장을 사전 구성.
+  - `council_start_briefing`에서도 `manager_mode` + `managers`를 one-shot으로 받아 즉시 구성 변경 가능.
+- 참여/합의 로직 동적화:
+  - 발제 제출, 발언권 요청, 안건 응답/종결은 고정 역할 목록이 아니라 현재 세션의 활성 팀장 목록 기준으로 판정.
+  - 따라서 프로젝트마다 필요한 팀장만 참여시키는 토론 운영이 가능.
+
+## 최신 반영(2026-02-14, 설치 인터뷰/동의 게이트 강화)
+
+- `make agent-install` 설치 흐름에 동의/설문 절차를 추가.
+  - LLM 설치 동의(약관 미동의 시 즉시 중단)
+  - 설치 범위 선택(global/local)
+  - Playwright MCP 설치 동의(`mcp_servers.playwright` 등록 여부)
+  - 사용자 전문성 간략 설문(overall/response_need/technical_depth/domain hints)
+- 설치 설문 결과를 기본 사용자 프로필 JSON으로 저장하고 launcher가 환경변수로 주입.
+  - `CODEX_TROLLER_DEFAULT_PROFILE_PATH`
+  - `start_interview`/`ingest_intent`에서 명시적 프로필이 없으면 기본값 자동 적용.

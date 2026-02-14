@@ -20,6 +20,7 @@
   - 신뢰도 낮음(<0.55): 과도한 자동결정/강한 가정은 억제하고 보수적으로 진행.
 - 인터뷰 질문은 고정 설문지가 아니라, 현재 누락된 정보 기준으로 매 턴 1개씩 동적으로 생성됩니다.
 - 세부 구현 계획은 단일 에이전트가 즉시 확정하지 않고, 팀장 council 토론 단계를 선행합니다.
+- council 팀장 구성은 세션별로 동적입니다. 프로젝트 특성에 맞게 역할을 추가/교체/제거할 수 있습니다.
 - `verify_result` 이후에는 Visual Reviewer 절차를 거칩니다.
   - 렌더링 가능한 MCP가 감지되면(`available_mcps`, `available_mcp_tools`) Visual Reviewer가 구현 화면/상호작용을 검토합니다.
   - 검토 후 제작본을 기준으로 UX Director 회의 요약(`ux_director_summary`)을 남겨야 다음 단계로 진행됩니다.
@@ -29,7 +30,7 @@
 ## 빠른 시작
 
 ```bash
-make agent-install   # 에이전트 원클릭 설치(빌드/검증/훅/설정 등록)
+make agent-install   # 인터랙티브 설치(약관 동의 -> global/local 범위 -> Playwright MCP 선택 -> 전문성 설문)
 make setup          # build + test + smoke + git hooks 설치
 make build          # Go가 없으면 bootstrap-go.sh가 로컬에 Go를 설치합니다.
 make test           # 단위 테스트 실행
@@ -42,6 +43,7 @@ make run-local      # 부트스트랩+빌드+실행
 
 에이전트 자동 설치 절차는 `AGENT_INSTALL.md`를 참고하세요.
 설치 후에는 스킬 `$codex-troller-autostart` 호출만으로 인터뷰를 바로 시작할 수 있습니다.
+`make agent-install`은 `codex-troller` 등록 시 launcher를 통해 설치 설문에서 수집한 기본 `user_profile`을 자동 로드합니다.
 
 `make build`는 내부에 Go가 없더라도 다음을 수행합니다.
 - `./scripts/bootstrap-go.sh` 실행
@@ -83,6 +85,7 @@ EOF2
 - `set_agent_routing_policy`
 - `get_agent_routing_policy`
 - `council_start_briefing`
+- `council_configure_team`
 - `council_submit_brief`
 - `council_summarize_briefs`
 - `council_request_floor`
@@ -132,6 +135,12 @@ EOF2
   - 예) `available_mcps:["playwright"]`, `available_mcp_tools:["playwright.screenshot"]`
 - 이 시작점은 인터뷰 질문을 먼저 만들고, 이후 워크플로우를 순차 진행합니다.
 
+## 동적 팀장 구성
+
+- `council_configure_team`으로 세션별 팀장을 `append|replace|remove` 할 수 있습니다.
+- `council_start_briefing` 호출 시 `managers`/`manager_mode`를 함께 전달해 one-shot으로 팀 구성을 바꿀 수도 있습니다.
+- 팀장 식별자는 자동 정규화됩니다. 예: `Development Lead` -> `development_lead`.
+
 ## Git Hook 정책
 
 - `make install-hooks`를 실행하면 `core.hooksPath=.githooks`가 설정됩니다.
@@ -180,6 +189,16 @@ EOF2
 ```
 
 권장: local-only 자동화이므로 `args`는 비워두고 필요 시 `WORKDIR` 환경변수로 작업 루트를 고정하세요.
+
+## 설치 시 선택 항목
+
+- `make agent-install` 실행 시 아래를 확인/수집합니다.
+  - LLM 설치 동의(미동의 시 즉시 중단)
+  - 설치 범위: `global` 또는 `local`
+  - Playwright MCP 설치 동의 여부 (`mcp_servers.playwright`, source: `https://github.com/microsoft/playwright-mcp`)
+  - 사용자 전문성 초기값(`overall`, `response_need`, `technical_depth`, `domain hints`)
+- 자동화가 필요하면 비대화형 모드를 사용하세요.
+  - `AGENT_INSTALL_NON_INTERACTIVE=1 INSTALL_TERMS_AGREED=yes ... make agent-install`
 
 ## 다음 단계 제안
 

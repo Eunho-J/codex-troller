@@ -35,6 +35,8 @@ Before running any install command, ask the user and wait for explicit answers.
 - All user-facing questions, consent prompts, and summaries must be in that language.
 - Do not default to English when the user started in another language.
 - Keep field keys/enum values in canonical form where needed (`global|local`, `yes|no`, profile keys).
+- At install completion, auto-detect the predominant user language used during the install conversation and save it to default profile as `consultant_lang`.
+- Current canonical `consultant_lang` values are `ko|en` (map Korean-dominant installs to `ko`, otherwise use `en`).
 
 ## Interview Policy (mandatory)
 
@@ -157,6 +159,8 @@ Use the following confirmation content in the user's language (semantic equivale
      - `response_need` (`low|balanced|high`)
      - `technical_depth` (`abstract|balanced|technical`)
      - `domain_knowledge` (comma-separated optional hints)
+   - Auto-capture (do not ask unless ambiguous):
+     - `consultant_lang` from predominant language during install conversation (`ko|en`)
 
 If terms are not accepted, stop installation immediately.
 
@@ -165,6 +169,7 @@ Recommended turn-by-turn order:
 2. Ask install scope only, wait for answer.
 3. Ask Playwright MCP consent only, wait for answer.
 4. Ask expertise profile fields one by one, validating each answer.
+5. Determine `consultant_lang` automatically from the install conversation language and persist it in profile.
 
 ## Installation Procedure (command-by-command)
 
@@ -317,6 +322,7 @@ cp -R "$SRC_DIR/skills/codex-troller-autostart" "$CODEX_HOME/skills/codex-trolle
 PROFILE_OVERALL="intermediate"
 PROFILE_RESPONSE_NEED="balanced"
 PROFILE_TECHNICAL_DEPTH="balanced"
+PROFILE_CONSULTANT_LANG="en"
 DOMAIN_KNOWLEDGE_JSON='{}'
 
 cat > "$PROFILE_PATH" <<EOF
@@ -324,6 +330,7 @@ cat > "$PROFILE_PATH" <<EOF
   "overall": "$PROFILE_OVERALL",
   "response_need": "$PROFILE_RESPONSE_NEED",
   "technical_depth": "$PROFILE_TECHNICAL_DEPTH",
+  "consultant_lang": "$PROFILE_CONSULTANT_LANG",
   "domain_knowledge": $DOMAIN_KNOWLEDGE_JSON
 }
 EOF
@@ -421,6 +428,7 @@ rm -rf "$FETCH_DIR"
 
 - `<CODEX_HOME>/.codex-troller/deps/go/bin/go` exists
 - `<CODEX_HOME>/.codex-troller/deps/node/bin/npx` exists
+- `<CODEX_HOME>/.codex-troller/default_user_profile.json` includes `consultant_lang`
 - If Playwright selected: `<CODEX_HOME>/.codex-troller/deps/playwright-browsers` has browser files
 - `<CODEX_HOME>/.codex-troller/bin/codex-mcp` exists
 - Codex config has `[mcp_servers.codex-troller]`

@@ -563,6 +563,52 @@ func TestDefaultProfileAppliedWhenInputMissing(t *testing.T) {
 	}
 }
 
+func TestDefaultProfileConsultantLanguageAppliedForNewSession(t *testing.T) {
+	tempDir := t.TempDir()
+	profilePath := filepath.Join(tempDir, "default_user_profile.json")
+	profileJSON := `{
+		"consultant_lang":"ko"
+	}`
+	if err := os.WriteFile(profilePath, []byte(profileJSON), 0o644); err != nil {
+		t.Fatalf("write profile failed: %v", err)
+	}
+	srv := NewMCPServer(Config{
+		StatePath:      filepath.Join(tempDir, "state.json"),
+		DefaultProfile: profilePath,
+	})
+	out, err := srv.toolStartInterview([]byte(`{"session_id":"default-lang-1"}`))
+	if err != nil {
+		t.Fatalf("start_interview failed: %v", err)
+	}
+	result := out.(map[string]any)
+	if result["consultant_lang"] != "ko" {
+		t.Fatalf("expected consultant_lang ko from default profile, got %v", result["consultant_lang"])
+	}
+}
+
+func TestRawIntentLanguageOverridesDefaultConsultantLanguage(t *testing.T) {
+	tempDir := t.TempDir()
+	profilePath := filepath.Join(tempDir, "default_user_profile.json")
+	profileJSON := `{
+		"consultant_lang":"en"
+	}`
+	if err := os.WriteFile(profilePath, []byte(profileJSON), 0o644); err != nil {
+		t.Fatalf("write profile failed: %v", err)
+	}
+	srv := NewMCPServer(Config{
+		StatePath:      filepath.Join(tempDir, "state.json"),
+		DefaultProfile: profilePath,
+	})
+	out, err := srv.toolStartInterview([]byte(`{"session_id":"default-lang-2","raw_intent":"목표: 로그인 안정화"}`))
+	if err != nil {
+		t.Fatalf("start_interview failed: %v", err)
+	}
+	result := out.(map[string]any)
+	if result["consultant_lang"] != "ko" {
+		t.Fatalf("expected consultant_lang ko from raw_intent language, got %v", result["consultant_lang"])
+	}
+}
+
 func TestInputProfileOverridesDefaultProfile(t *testing.T) {
 	tempDir := t.TempDir()
 	profilePath := filepath.Join(tempDir, "default_user_profile.json")

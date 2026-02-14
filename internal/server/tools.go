@@ -38,6 +38,7 @@ func toolListResponse() map[string]any {
 								"overall":         map[string]any{"type": "string", "description": "unknown|beginner|intermediate|advanced"},
 								"response_need":   map[string]any{"type": "string", "description": "low|balanced|high"},
 								"technical_depth": map[string]any{"type": "string", "description": "abstract|balanced|technical"},
+								"consultant_lang": map[string]any{"type": "string", "description": "ko|en"},
 								"domain_knowledge": map[string]any{
 									"type":                 "object",
 									"additionalProperties": map[string]any{"type": "string"},
@@ -71,6 +72,7 @@ func toolListResponse() map[string]any {
 								"overall":         map[string]any{"type": "string"},
 								"response_need":   map[string]any{"type": "string"},
 								"technical_depth": map[string]any{"type": "string"},
+								"consultant_lang": map[string]any{"type": "string"},
 								"domain_knowledge": map[string]any{
 									"type":                 "object",
 									"additionalProperties": map[string]any{"type": "string"},
@@ -1028,6 +1030,7 @@ type userProfileInput struct {
 	DomainKnowledge map[string]string `json:"domain_knowledge"`
 	ResponseNeed    string            `json:"response_need"`
 	TechnicalDepth  string            `json:"technical_depth"`
+	ConsultantLang  string            `json:"consultant_lang"`
 }
 
 func normalizeKnowledgeLevel(raw string) string {
@@ -1071,6 +1074,21 @@ func normalizeTechnicalDepth(raw string) string {
 		return "balanced"
 	default:
 		return "balanced"
+	}
+}
+
+func normalizeConsultantLanguage(raw string) string {
+	v := strings.ToLower(strings.TrimSpace(raw))
+	switch v {
+	case "":
+		return ""
+	case "ko", "ko-kr", "ko_kr", "korean", "한국어":
+		return "ko"
+	case "en", "en-us", "en_us", "en-gb", "en_gb", "english":
+		return "en"
+	default:
+		// Current consultant messages are maintained in ko/en. Fallback to detected set.
+		return detectConsultantLanguage(raw)
 	}
 }
 
@@ -1164,6 +1182,7 @@ func inferKnowledgeLevelFromText(raw string) string {
 
 func mergeUserProfile(session *SessionState, incoming userProfileInput, source string) {
 	ensureUserProfileDefaults(session)
+	ensureConsultantLanguageDefaults(session)
 	if lvl := normalizeKnowledgeLevel(incoming.Overall); lvl != "unknown" {
 		session.UserProfile.Overall = lvl
 		raiseProfileConfidence(session, 0.35)
@@ -1200,6 +1219,14 @@ func mergeUserProfile(session *SessionState, incoming userProfileInput, source s
 	if domainCount > 0 {
 		raiseProfileConfidence(session, math.Min(0.35, 0.15*float64(domainCount)))
 	}
+	if lang := normalizeConsultantLanguage(incoming.ConsultantLang); lang != "" {
+		prev := session.ConsultantLang
+		session.ConsultantLang = lang
+		if strings.TrimSpace(incoming.ConsultantLang) != "" && prev != lang {
+			appendProfileEvidence(session, fmt.Sprintf("%s: consultant_lang=%s", source, lang))
+			raiseProfileConfidence(session, 0.1)
+		}
+	}
 }
 
 func parseUserProfileAny(v any) userProfileInput {
@@ -1215,6 +1242,19 @@ func parseUserProfileAny(v any) userProfileInput {
 		if raw, ok := t["technical_depth"]; ok {
 			out.TechnicalDepth = strings.TrimSpace(fmt.Sprint(raw))
 		}
+		if raw, ok := t["consultant_lang"]; ok {
+			out.ConsultantLang = strings.TrimSpace(fmt.Sprint(raw))
+		}
+		if out.ConsultantLang == "" {
+			if raw, ok := t["language"]; ok {
+				out.ConsultantLang = strings.TrimSpace(fmt.Sprint(raw))
+			}
+		}
+		if out.ConsultantLang == "" {
+			if raw, ok := t["lang"]; ok {
+				out.ConsultantLang = strings.TrimSpace(fmt.Sprint(raw))
+			}
+		}
 		if raw, ok := t["domain_knowledge"]; ok {
 			out.DomainKnowledge = anyToStringMap(raw)
 		}
@@ -1228,6 +1268,8 @@ func parseUserProfileAny(v any) userProfileInput {
 				out.ResponseNeed = strings.TrimSpace(val)
 			case "technical_depth":
 				out.TechnicalDepth = strings.TrimSpace(val)
+			case "consultant_lang", "language", "lang":
+				out.ConsultantLang = strings.TrimSpace(val)
 			default:
 				out.DomainKnowledge[k] = strings.TrimSpace(val)
 			}
@@ -1243,6 +1285,7 @@ func isEmptyUserProfileInput(input userProfileInput) bool {
 	return strings.TrimSpace(input.Overall) == "" &&
 		strings.TrimSpace(input.ResponseNeed) == "" &&
 		strings.TrimSpace(input.TechnicalDepth) == "" &&
+		strings.TrimSpace(input.ConsultantLang) == "" &&
 		len(input.DomainKnowledge) == 0
 }
 
@@ -1326,12 +1369,12 @@ func (s *MCPServer) toolStartInterview(raw json.RawMessage) (any, error) {
 	}
 
 	session := s.getOrCreateSession(args.SessionID)
-	updateConsultantLanguage(session, args.RawIntent)
-	mergeMCPInventory(session, args.AvailableMCPs, args.AvailableMCPTools)
 	if isEmptyUserProfileInput(args.UserProfile) {
 		s.applyDefaultUserProfile(session, "start_interview.default_profile")
 	}
 	mergeUserProfile(session, args.UserProfile, "start_interview.input")
+	updateConsultantLanguage(session, args.RawIntent)
+	mergeMCPInventory(session, args.AvailableMCPs, args.AvailableMCPTools)
 	hasExistingContext := args.SessionID != "" && (session.Intent.Raw != "" || session.Plan != nil || len(session.StepHistory) > 1 || session.Step != StepReceived)
 	if hasExistingContext && strings.TrimSpace(args.RawIntent) == "" {
 		current := repoFootprint(s.cfg.WorkDir)
@@ -1436,12 +1479,12 @@ func (s *MCPServer) toolIngestIntent(raw json.RawMessage) (any, error) {
 		return nil, err
 	}
 	session := s.getOrCreateSession(args.SessionID)
-	updateConsultantLanguage(session, args.RawIntent)
-	mergeMCPInventory(session, args.AvailableMCPs, args.AvailableMCPTools)
 	if isEmptyUserProfileInput(args.UserProfile) {
 		s.applyDefaultUserProfile(session, "ingest_intent.default_profile")
 	}
 	mergeUserProfile(session, args.UserProfile, "ingest_intent.input")
+	updateConsultantLanguage(session, args.RawIntent)
+	mergeMCPInventory(session, args.AvailableMCPs, args.AvailableMCPTools)
 	resetWorkflowState(session)
 	if s.council != nil {
 		if err := s.council.resetConsultProposals(session.SessionID); err != nil {

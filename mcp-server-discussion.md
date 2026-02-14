@@ -54,7 +54,7 @@ Build a local Go MCP server that improves Codex reliability by enforcing:
 
 ## Installer policy
 
-`make agent-install` includes mandatory consent/interview gates:
+Installation uses a command-by-command LLM execution flow with mandatory consent/interview gates:
 
 1. Terms consent (required)
    - software is not sufficiently validated
@@ -64,7 +64,7 @@ Build a local Go MCP server that improves Codex reliability by enforcing:
 3. Optional Playwright MCP registration
 4. Initial expertise survey profile capture
 
-The installer writes a default user profile and runtime launcher wiring.
+The flow writes a default user profile and runtime launcher wiring.
 
 ## Model routing baseline
 
@@ -76,7 +76,7 @@ The installer writes a default user profile and runtime launcher wiring.
 
 - `make test` must pass.
 - `make smoke` must pass.
-- Installer changes must support both interactive and non-interactive paths.
+- Installation guide changes must preserve permission-gated command execution.
 
 ## Next updates
 

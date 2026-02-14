@@ -139,12 +139,7 @@ Recommended turn-by-turn order:
 3. Ask Playwright MCP consent only, wait for answer.
 4. Ask expertise profile fields one by one, validating each answer.
 
-## Installation Procedure (command-by-command, no make/script flow)
-
-Deprecated for LLM installation flow:
-- `make agent-install`
-- `make setup`
-- shell installer wrappers in `scripts/`
+## Installation Procedure (command-by-command)
 
 After confirmations are complete, run commands one by one:
 

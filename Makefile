@@ -1,4 +1,4 @@
-.PHONY: bootstrap build test smoke install-hooks setup agent-install run run-local run-binary clean
+.PHONY: bootstrap build test smoke install-hooks setup run run-local run-binary clean
 
 GO_BIN := $(shell bash scripts/bootstrap-go.sh)
 
@@ -19,9 +19,6 @@ install-hooks:
 	bash scripts/install-hooks.sh
 
 setup: build test smoke install-hooks
-
-agent-install:
-	bash scripts/install-agent.sh
 
 run: build
 	$(GO_BIN) run ./cmd/codex-mcp

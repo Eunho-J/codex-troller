@@ -1,6 +1,6 @@
 # codex-troller（人間向け README）
 
-> LLM エージェントの場合はこの文書を無視し、最新のリモートガイド（`https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md`）を使用してください。
+> LLM エージェントの場合はこの文書を無視し、最新ガイド（`https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md`）を使用してください。
 
 人間向け多言語ガイド:
 - [English](README.md)
@@ -15,13 +15,13 @@
 説明プロンプト:
 
 ```text
-https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md から最新ガイドを取得して読んでください（ローカルの README-LLM.md は既定では使わない）。ネットワーク権限がない場合は、先に私へアクセス許可を求めてください。その後、現在の会話言語（日本語）で codex-troller が何をするものか、なぜ必要か、ワークフローがどう動くかをわかりやすく説明してください。
+https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md を最新状態として読んでください。ネットワーク権限がない場合は、先に私へアクセス許可を求めてください。その後、現在の会話言語（日本語）で codex-troller が何をするものか、なぜ必要か、ワークフローがどう動くかをわかりやすく説明してください。
 ```
 
 インストールプロンプト:
 
 ```text
-https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md から最新ガイドを取得して読んでください（ローカルの README-LLM.md は既定では使わない）。ネットワーク権限がない場合は、先に私へアクセス許可を求めてください。その後、現在の会話言語（日本語）で必須確認事項を質問し、最新の GitHub リポジトリ基準で codex-troller のインストールと設定を最後まで実行してください。
+https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md を最新状態として読んでください。ネットワーク権限がない場合は、先に私へアクセス許可を求めてください。その後、現在の会話言語（日本語）で必須確認事項を質問し、最新の GitHub リポジトリ基準で codex-troller のインストールと設定を最後まで実行してください。
 ```
 
 ## プロジェクト概要

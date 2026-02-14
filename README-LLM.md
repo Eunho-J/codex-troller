@@ -6,8 +6,7 @@ Do not use `skill-installer` for this repository. This repository is an MCP serv
 ## Source-of-Truth Policy (mandatory)
 
 - Always fetch the latest installation guide from:
-  - `https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md`
-- Do not treat a local `README-LLM.md` copy as source-of-truth by default.
+  - `https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md`
 - If internet access is blocked/unavailable, ask the user for permission to enable network access first.
 - If network permission is denied, ask the user whether to:
   1) stop installation, or

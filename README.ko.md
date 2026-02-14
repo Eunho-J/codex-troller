@@ -1,6 +1,6 @@
 # codex-troller (사람용 README)
 
-> LLM 에이전트라면 이 문서는 건너뛰고 최신 원격 가이드(`https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md`)를 사용하세요.
+> LLM 에이전트라면 이 문서는 건너뛰고 최신 가이드(`https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md`)를 사용하세요.
 
 사람용 다국어 가이드:
 - [English](README.md)
@@ -15,13 +15,13 @@
 설명 프롬프트:
 
 ```text
-https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md 에서 최신 가이드를 가져와 읽어줘(기본적으로 로컬 README-LLM.md는 사용하지 마). 인터넷 권한이 막혀 있으면 먼저 나에게 네트워크 접근 승인을 요청해줘. 그 다음 지금 대화 언어(한국어)로 codex-troller가 무엇을 하는지, 왜 필요한지, 워크플로우가 어떻게 동작하는지 쉽게 설명해줘.
+https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md 를 최신 상태 기준으로 읽어줘. 인터넷 권한이 막혀 있으면 먼저 나에게 네트워크 접근 승인을 요청해줘. 그 다음 지금 대화 언어(한국어)로 codex-troller가 무엇을 하는지, 왜 필요한지, 워크플로우가 어떻게 동작하는지 쉽게 설명해줘.
 ```
 
 설치 프롬프트:
 
 ```text
-https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md 에서 최신 가이드를 가져와 읽어줘(기본적으로 로컬 README-LLM.md는 사용하지 마). 인터넷 권한이 막혀 있으면 먼저 나에게 네트워크 접근 승인을 요청해줘. 그 다음 지금 대화 언어(한국어)로 필수 확인 항목을 질문하고, 최신 GitHub 레포지토리 기준으로 codex-troller 설치/설정을 끝까지 진행해줘.
+https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md 를 최신 상태 기준으로 읽어줘. 인터넷 권한이 막혀 있으면 먼저 나에게 네트워크 접근 승인을 요청해줘. 그 다음 지금 대화 언어(한국어)로 필수 확인 항목을 질문하고, 최신 GitHub 레포지토리 기준으로 codex-troller 설치/설정을 끝까지 진행해줘.
 ```
 
 ## 프로젝트 개요

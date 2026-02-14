@@ -1,6 +1,6 @@
 # codex-troller（面向人类的 README）
 
-> 如果你是 LLM agent，请忽略本文件并使用最新远程指南：`https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md`。
+> 如果你是 LLM agent，请忽略本文件并使用最新指南：`https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md`。
 
 面向人类的多语言指南:
 - [English](README.md)
@@ -15,13 +15,13 @@
 说明提示词:
 
 ```text
-请先从 https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md 拉取并阅读最新指南（默认不要使用本地 README-LLM.md）。如果网络权限受限，请先向我请求网络访问许可。然后使用当前对话语言（中文）说明 codex-troller 是做什么的、为什么需要它、以及工作流如何运行。
+请将 https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md 作为最新版本读取。如果网络权限受限，请先向我请求网络访问许可。然后使用当前对话语言（中文）说明 codex-troller 是做什么的、为什么需要它、以及工作流如何运行。
 ```
 
 安装提示词:
 
 ```text
-请先从 https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md 拉取并阅读最新指南（默认不要使用本地 README-LLM.md）。如果网络权限受限，请先向我请求网络访问许可。然后使用当前对话语言（中文）先向我确认必需确认项，并基于最新 GitHub 仓库把 codex-troller 的安装与配置完整执行到结束。
+请将 https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md 作为最新版本读取。如果网络权限受限，请先向我请求网络访问许可。然后使用当前对话语言（中文）先向我确认必需确认项，并基于最新 GitHub 仓库把 codex-troller 的安装与配置完整执行到结束。
 ```
 
 ## 项目概览

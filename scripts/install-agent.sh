@@ -191,6 +191,27 @@ fi
 
 make -C "$ROOT_DIR" setup >/dev/null
 
+if [[ "$PLAYWRIGHT_CONSENT" == "yes" ]]; then
+  if ! command -v npx >/dev/null 2>&1; then
+    echo "[agent-install] failed: Playwright MCP requires Node.js+npx, but npx is not available." >&2
+    exit 1
+  fi
+
+  echo "[agent-install] installing Playwright runtime dependencies..."
+  if [[ "$(uname -s)" == "Linux" ]]; then
+    # Linux needs browser binaries + OS dependencies.
+    if ! npx -y playwright@latest install --with-deps chromium firefox webkit; then
+      echo "[agent-install] failed: could not install Playwright browsers/OS dependencies on Linux." >&2
+      exit 1
+    fi
+  else
+    if ! npx -y playwright@latest install chromium firefox webkit; then
+      echo "[agent-install] failed: could not install Playwright browser binaries." >&2
+      exit 1
+    fi
+  fi
+fi
+
 mkdir -p "$(dirname "$CONFIG_PATH")"
 touch "$CONFIG_PATH"
 mkdir -p "$(dirname "$PROFILE_PATH")"
@@ -307,9 +328,6 @@ strip_mcp_section "$CONFIG_PATH" "mcp_servers.playwright"
 } >>"$CONFIG_PATH"
 
 if [[ "$PLAYWRIGHT_CONSENT" == "yes" ]]; then
-  if ! command -v npx >/dev/null 2>&1; then
-    echo "[agent-install] warning: npx not found. Playwright MCP was registered but requires Node.js+npx at runtime."
-  fi
   {
     echo
     echo "[mcp_servers.playwright]"

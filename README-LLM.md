@@ -159,3 +159,22 @@ If any step fails:
 - explain the failure in plain language,
 - fix and retry automatically,
 - ask user only when a permission/risk decision is required.
+
+## Completion Message Policy (mandatory)
+
+- Final completion message must be user-friendly first, operator-friendly second.
+- Use the user's language.
+- First line must state outcome in plain words (installed/not installed).
+- Next line must give exactly one immediate action.
+  - Local install: "Restart Codex in this folder."
+  - Global install: "Restart Codex."
+- Do not dump full paths/config blocks first.
+- Do not lead with MCP section names, binary paths, or profile JSON values.
+- Provide technical details only as an optional follow-up:
+  - "If you want, I can show detailed paths/logs."
+
+Recommended completion template:
+1. Status: install + setup + smoke result (plain language).
+2. Immediate next action (one sentence).
+3. Optional: brief "what was configured" summary without deep internals.
+4. Optional offer for detailed technical report on request.

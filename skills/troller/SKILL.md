@@ -1,6 +1,6 @@
 ---
 name: troller
-description: Start codex-troller with interview-first workflow automatically
+description: Start codex-troller with interview-first workflow automatically (troller-on)
 argument-hint: "[task summary]"
 ---
 
@@ -11,23 +11,21 @@ Purpose: start a full task lifecycle with interview-first behavior by calling th
 ## Trigger
 
 - User mentions `$troller` or asks to "start with interview" using codex-troller.
-- User mentions `$troller off` (or equivalent disable intent) to stop the pipeline.
 
 ## Required Behavior
 
-1. If user explicitly requests off (`$troller off`, `disable`, `stop`), call `autostart_set_mode` with `mode="off"` and end.
-2. Otherwise call `autostart_set_mode` with `mode="on"` first.
-3. Immediately call `start_interview`.
+1. Call `autostart_set_mode` with `mode="on"` first.
+2. Immediately call `start_interview`.
    - If user background is known from prior conversation, pass it as `user_profile` to adapt depth/autonomy.
-4. Ask interview questions one by one from `interview_questions`.
+3. Ask interview questions one by one from `interview_questions`.
    - Questions must be situational and concrete, never abstract policy prompts.
    - Ask like a client meeting for non-technical users (e.g., "when should info panel appear?" not "define approval policy").
-5. Convert user answers into structured intent fields:
+4. Convert user answers into structured intent fields:
    - `goal: ...`
    - `scope: ...`
    - `constraints: ...`
    - `success_criteria: ...`
-6. Call workflow tools in order:
+5. Call workflow tools in order:
    - Before each tool call after `start_interview`, call `get_session_status` and check `next`.
    - If your intended tool does not match `next`, do not force the call. Follow `next` first.
    - `ingest_intent`
@@ -62,12 +60,12 @@ Purpose: start a full task lifecycle with interview-first behavior by calling th
      - include `ux_director_summary` and `ux_decision`
    - `record_user_feedback`
    - `summarize`
-7. Never run `run_action` before plan approval.
-8. Consultant or manager roles must never implement directly.
+6. Never run `run_action` before plan approval.
+7. Consultant or manager roles must never implement directly.
    - Consultant/team leads produce intent/plan/review decisions only.
    - Actual code/command execution must be delegated to worker agents.
-9. If approval/risk/permission ambiguity appears, pause execution and continue interview.
-10. Keep looping until explicit user approval:
+8. If approval/risk/permission ambiguity appears, pause execution and continue interview.
+9. Keep looping until explicit user approval:
    - verification fail or `approved=false` -> continue from `generate_plan`
    - only treat done when `record_user_feedback(approved=true)` and step is `summarized`
 

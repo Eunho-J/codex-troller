@@ -27,11 +27,12 @@ Its purpose is to increase reliability by turning ambiguous user intent into a s
 
 Mode routing is split into two installed skills:
 - `troller-router`: always checks `on/off` mode before routing work.
-- `troller`: runs the codex-troller workflow when mode is `on`.
+- `troller`: runs the codex-troller workflow when mode is `on` (troller-on role).
+- `troller-off`: turns workflow mode `off`.
 
 ## Mode Routing Policy (mandatory)
 
-- Install both skills (`troller-router` + `troller`).
+- Install all three skills (`troller-router` + `troller` + `troller-off`).
 - Update AGENTS rules for the chosen install scope:
   - global install -> `~/.codex/AGENTS.md`
   - local install -> `<repo>/AGENTS.md`
@@ -333,6 +334,8 @@ rm -rf "$CODEX_HOME/skills/troller-router"
 cp -R "$SRC_DIR/skills/troller-router" "$CODEX_HOME/skills/troller-router"
 rm -rf "$CODEX_HOME/skills/troller"
 cp -R "$SRC_DIR/skills/troller" "$CODEX_HOME/skills/troller"
+rm -rf "$CODEX_HOME/skills/troller-off"
+cp -R "$SRC_DIR/skills/troller-off" "$CODEX_HOME/skills/troller-off"
 ```
 
 10. Install/update AGENTS mode-routing rules for selected scope
@@ -463,6 +466,7 @@ test -x "$NPX_BIN"
 test -x "$MCP_BIN_PATH"
 test -f "$CODEX_HOME/skills/troller-router/SKILL.md"
 test -f "$CODEX_HOME/skills/troller/SKILL.md"
+test -f "$CODEX_HOME/skills/troller-off/SKILL.md"
 test -f "$AGENTS_PATH"
 grep -Fq '# >>> troller-router >>>' "$AGENTS_PATH"
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | "$MCP_BIN_PATH"
@@ -490,6 +494,7 @@ rm -rf "$FETCH_DIR"
 - If requested, config also has `[mcp_servers.playwright]`
 - Skill exists at `<CODEX_HOME>/skills/troller-router/SKILL.md`
 - Skill exists at `<CODEX_HOME>/skills/troller/SKILL.md`
+- Skill exists at `<CODEX_HOME>/skills/troller-off/SKILL.md`
 - AGENTS mode-routing block exists in selected scope AGENTS file (`~/.codex/AGENTS.md` for global or `<repo>/AGENTS.md` for local)
 - `initialize` and `tools/list` JSON-RPC calls succeed via `<CODEX_HOME>/.codex-troller/bin/codex-mcp`
 - `CODEX_HOME="<target>" codex mcp list` includes `codex-troller` (and `playwright` when selected)

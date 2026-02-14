@@ -1,202 +1,44 @@
-# codex-troller MCP 로컬 서버
+# codex-troller (사람용 README)
 
-가이드:
-- [English Guide](README.md)
-- [한국어 가이드](README.ko.md)
-- [日本語ガイド](README.ja.md)
-- [中文指南](README.zh.md)
+> LLM 에이전트라면 이 문서는 건너뛰고 [README-LLM.md](README-LLM.md)를 사용하세요.
 
-설계 노트:
+사람용 다국어 가이드:
+- [English](README.md)
+- [한국어](README.ko.md)
+- [日本語](README.ja.md)
+- [中文](README.zh.md)
+
+원하면 LLM 에이전트에게 이 프로젝트 설명과 설치를 맡길 수 있습니다.
+
+복사/붙여넣기 1줄 프롬프트:
+
+```text
+Read README-LLM.md in https://github.com/Eunho-J/codex-troller, ask me the required confirmations first, then install and configure codex-troller end-to-end.
+```
+
+## 프로젝트 개요
+
+`codex-troller`는 Codex CLI를 위한 로컬 Go 기반 MCP 서버입니다.
+사용자 목표가 두루뭉술하게 시작되는 상황에서도 AI 개발 작업의 신뢰도를 높이기 위해 만들어졌습니다.
+
+## 핵심 목적과 가치관
+
+- 모호한 사용자 의도를 구조화된 실행 계획으로 변환합니다.
+- 인터뷰 -> 기획 -> 구현 -> 검증 전 과정에서 의도 정합성을 유지합니다.
+- 승인/권한/리스크 같은 민감 경계에서 사용자 통제를 보장합니다.
+- 세션이 끊겨도 재개 가능한 상태를 유지합니다.
+
+## 전체 구조와 동작 방식
+
+- 의도 수집 및 상담형 구체화 루프.
+- 동적으로 팀 구성이 가능한 council 기반 기획.
+- 작은 단위 실행과 검증 게이트.
+- UI/UX 작업에서 렌더링 가능한 MCP가 있으면 시각 검토 게이트 적용.
+- 장기 작업을 위한 상태 저장 + git 연동 재조정.
+
+## 설계 노트
+
 - [English Design Notes](mcp-server-discussion.md)
 - [한국어 설계 노트](mcp-server-discussion.ko.md)
 - [日本語設計ノート](mcp-server-discussion.ja.md)
 - [中文设计说明](mcp-server-discussion.zh.md)
-
-## 설치 (MCP 서버, 스킬 아님)
-
-이 저장소는 Codex 스킬 패키지가 아니라 **MCP 서버 프로젝트**입니다.
-기본이자 권장 경로는 LLM 기반 설치입니다.
-이 저장소에는 `skill-installer`를 사용하지 마세요.
-
-기본 Codex 에이전트에 아래 프롬프트를 복사/붙여넣기 하세요:
-
-```text
-Install `codex-troller` from `https://github.com/Eunho-J/codex-troller`.
-
-Requirements:
-- Treat this repository as an MCP server project, not a skill package.
-- Do not use `skill-installer`.
-- Read and follow this repository `README.md` install/setup steps.
-- 어떤 설치 명령이든 실행하기 전에, 아래 항목을 사용자에게 질문하고 명시적 답변을 받은 뒤 진행한다:
-  1) 약관 동의 (`충분히 검증되지 않음`, `문제 발생 시 사용자 책임`, `GNU GPL v3.0 인지`);
-  2) 설치 범위 (`global` 또는 `local`);
-  3) Playwright MCP 설치 여부 (`yes`/`no`);
-  4) 초기 전문성 프로필 (`overall`, `response_need`, `technical_depth`, `domain_knowledge`).
-- 약관에 동의하지 않으면 설치를 중단한다.
-- Run interactive `make agent-install` (terms consent, install scope, optional Playwright MCP registration, expertise survey).
-- Run `make setup` and verify with `make smoke`.
-- If a step fails, resolve it and continue until installation and smoke verification both pass.
-```
-
-`codex-troller`는 Codex CLI용 로컬 Go MCP 서버입니다.
-핵심 목적은 작업을 구조화해 신뢰성과 사용자 의도 정합성을 높이는 것입니다.
-
-## 핵심 개념
-
-- 세션 워크플로우:
-  - `received -> intent_captured -> (council_briefing/discussion/finalized) -> plan_generated -> mockup_ready -> plan_approved -> action_executed -> verify_run -> visual_review -> record_user_feedback -> summarized`
-- 기본 흐름:
-  - 의도 수집 -> council 초안 -> 상담 구체화 루프 -> 계획/목업 -> 실행 -> 검증 -> 사용자 승인
-- 동적 council 팀:
-  - 팀장 역할은 세션 단위이며 append/replace/remove가 가능합니다.
-- 지속 실행:
-  - 상태는 JSON + SQLite에 저장되며 저장소 footprint와 reconcile할 수 있습니다.
-- 시각 검토 게이트:
-  - UI/UX 작업에서 렌더링 가능한 MCP 툴이 감지되면 최종 승인 전에 `visual_review`가 필요합니다.
-
-## 빠른 시작
-
-```bash
-make agent-install   # 대화형 설치: 약관 -> 범위(global/local) -> Playwright MCP 동의 -> 전문성 설문
-make setup          # build + test + smoke + 훅 설치
-make build          # Go가 없으면 로컬 Go 툴체인을 부트스트랩
-make test           # 단위 테스트
-make smoke          # JSON-RPC end-to-end 스모크 테스트
-make install-hooks  # git 훅 설치
-make run-binary     # 빌드된 바이너리 실행 (.codex-mcp/bin/codex-mcp)
-# 또는
-make run-local      # bootstrap + build + run
-```
-
-설치 후 Codex에서 `$codex-troller-autostart`를 호출할 수 있습니다.
-
-## 설치 동작
-
-`make agent-install`은 아래를 강제합니다.
-
-1. 약관 동의 게이트 (필수)
-   - 소프트웨어가 충분히 검증되지 않음
-   - 문제/손해에 대한 책임은 사용자 본인
-   - GNU GPL v3.0 라이선스 인지
-2. 설치 범위 선택
-   - `global` (`~/.codex/...`) 또는 `local` (`<repo>/.codex/...`)
-3. Playwright MCP 등록(선택)
-   - source: `https://github.com/microsoft/playwright-mcp`
-4. 사용자 전문성 초기 설문
-   - `overall`, `response_need`, `technical_depth`, `domain_knowledge`
-5. 기본 프로필 저장
-   - 런타임에서 launcher 환경변수로 프로필 파일 주입
-
-비대화형 모드:
-
-```bash
-AGENT_INSTALL_NON_INTERACTIVE=1 \
-INSTALL_TERMS_AGREED=yes \
-INSTALL_SCOPE=global \
-INSTALL_PLAYWRIGHT_MCP=no \
-INSTALL_PROFILE_OVERALL=intermediate \
-INSTALL_PROFILE_RESPONSE_NEED=balanced \
-INSTALL_PROFILE_TECHNICAL_DEPTH=balanced \
-INSTALL_PROFILE_DOMAIN_HINTS="backend,security" \
-make agent-install
-```
-
-## 수동 실행 예시
-
-```bash
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | .codex-mcp/bin/codex-mcp
-
-echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | .codex-mcp/bin/codex-mcp
-
-cat <<'EOF2' | .codex-mcp/bin/codex-mcp
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ingest_intent","arguments":{"raw_intent":"goal: add error handling and tests to login API module","session_id":""}}}
-EOF2
-```
-
-## 프로세스 검증
-
-- 단위 테스트: `make test`
-- end-to-end 스모크: `make smoke`
-- 스모크는 council 합의와 최종 사용자 승인 게이트를 포함한 전체 경로를 검증합니다.
-
-스모크 환경변수:
-- `SMOKE_GOAL`
-- `SMOKE_SCOPE`
-- `SMOKE_CONSTRAINT`
-- `SMOKE_CRITERIA`
-- `SMOKE_TAGS_CSV`
-- `SMOKE_AVAILABLE_MCPS`
-- `SMOKE_AVAILABLE_MCP_TOOLS`
-
-## 제공 도구
-
-### 워크플로우
-
-- `start_interview`
-- `ingest_intent`
-- `clarify_intent`
-- `generate_plan`
-- `generate_mockup`
-- `approve_plan`
-- `reconcile_session_state`
-- `set_agent_routing_policy`
-- `get_agent_routing_policy`
-- `council_configure_team`
-- `council_start_briefing`
-- `council_submit_brief`
-- `council_summarize_briefs`
-- `council_request_floor`
-- `council_grant_floor`
-- `council_publish_statement`
-- `council_respond_topic`
-- `council_close_topic`
-- `council_finalize_consensus`
-- `council_get_status`
-- `validate_workflow_transition`
-- `run_action`
-- `verify_result`
-- `visual_review`
-- `record_user_feedback`
-- `continue_persistent_execution`
-- `summarize`
-- `get_session_status`
-
-### Git 헬퍼
-
-- `git_get_state`
-- `git_diff_symbols`
-- `git_commit_with_context`
-- `git_resolve_conflict`
-- `git_bisect_start`
-- `git_recover_state`
-
-## 런타임 상태
-
-- 세션 상태: `.codex-mcp/state/sessions.json`
-- council DB: `.codex-mcp/state/council.db`
-- 설치 프로필(기본):
-  - global: `~/.codex/codex-troller/default_user_profile.json`
-  - local: `<repo>/.codex/codex-troller/default_user_profile.json`
-
-## 동적 council 팀 예시
-
-```json
-{
-  "name": "council_configure_team",
-  "arguments": {
-    "session_id": "s1",
-    "mode": "replace",
-    "managers": [
-      { "role": "development lead", "domain": "backend" },
-      { "role": "ux director", "domain": "frontend" },
-      { "role": "llm lead", "domain": "ai_ml" }
-    ]
-  }
-}
-```
-
-## 에이전트 라우팅 기본값
-
-- 사용자 인터뷰: `gpt-5.2`
-- 오케스트레이터/리뷰어: `gpt-5.3-codex`
-- 워커(함수/모듈 구현): `gpt-5.3-codex-spark`

@@ -15,13 +15,13 @@
 설명 프롬프트:
 
 ```text
-https://github.com/Eunho-J/codex-troller 의 README-LLM.md를 읽고, codex-troller가 무엇을 하는지, 왜 필요한지, 워크플로우가 어떻게 동작하는지 쉽게 설명해줘.
+https://github.com/Eunho-J/codex-troller 의 README-LLM.md를 읽고, 지금 대화 언어(한국어)로 codex-troller가 무엇을 하는지, 왜 필요한지, 워크플로우가 어떻게 동작하는지 쉽게 설명해줘.
 ```
 
 설치 프롬프트:
 
 ```text
-https://github.com/Eunho-J/codex-troller 의 README-LLM.md를 읽고, 먼저 필수 확인 항목을 나에게 질문한 뒤 codex-troller를 설치와 설정까지 끝까지 진행해줘.
+https://github.com/Eunho-J/codex-troller 의 README-LLM.md를 읽고, 지금 대화 언어(한국어)로 먼저 필수 확인 항목을 질문한 뒤 codex-troller를 설치와 설정까지 끝까지 진행해줘.
 ```
 
 ## 프로젝트 개요

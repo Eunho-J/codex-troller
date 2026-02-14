@@ -17,25 +17,46 @@ Its purpose is to increase reliability by turning ambiguous user intent into a s
 
 Before running any install command, ask the user and wait for explicit answers.
 
-Use this exact confirmation block:
+## Language Policy (mandatory)
+
+- Detect the user's working language from their latest request.
+- All user-facing questions, consent prompts, and summaries must be in that language.
+- Do not default to English when the user started in another language.
+- Keep field keys/enum values in canonical form where needed (`global|local`, `yes|no`, profile keys).
+
+## Interview Policy (mandatory)
+
+- Ask exactly one confirmation question at a time.
+- Wait for the user's answer before asking the next question.
+- Do not present the whole checklist in a single message.
+- If an answer is ambiguous, ask a short follow-up for that single item.
+- Do not proceed to installation until all required items are confirmed.
+
+Use the following confirmation content in the user's language (semantic equivalent, not fixed English wording):
 
 1. Terms consent
-   - "This software is not sufficiently validated."
-   - "You assume responsibility for issues/damages."
-   - "You acknowledge the GNU GPL v3.0 license."
-   - Ask: "Do you agree to all three terms? (yes/no)"
+   - software is not sufficiently validated
+   - user assumes responsibility for issues/damages
+   - GNU GPL v3.0 license acknowledged
+   - Ask for explicit agreement to all 3 terms (`yes/no`)
 2. Install scope
-   - Ask: "Install scope: global (`~/.codex`) or local (`<repo>/.codex`)?"
+   - Ask install scope: `global` (`~/.codex`) or `local` (`<repo>/.codex`)
 3. Optional Playwright MCP
-   - Ask: "Do you want to register Playwright MCP (`@playwright/mcp`)? (yes/no)"
+   - Ask whether to register Playwright MCP (`@playwright/mcp`) (`yes/no`)
 4. Initial expertise profile
-   - Ask and capture:
+   - Ask and capture (questions in user's language):
      - `overall` (`beginner|intermediate|advanced`)
      - `response_need` (`low|balanced|high`)
      - `technical_depth` (`abstract|balanced|technical`)
      - `domain_knowledge` (comma-separated optional hints)
 
 If terms are not accepted, stop installation immediately.
+
+Recommended turn-by-turn order:
+1. Ask terms consent only, wait for answer.
+2. Ask install scope only, wait for answer.
+3. Ask Playwright MCP consent only, wait for answer.
+4. Ask expertise profile fields one by one, validating each answer.
 
 ## Installation Procedure
 

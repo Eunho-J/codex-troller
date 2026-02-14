@@ -15,13 +15,13 @@
 説明プロンプト:
 
 ```text
-https://github.com/Eunho-J/codex-troller の README-LLM.md を読み、codex-troller が何をするものか、なぜ必要か、ワークフローがどう動くかをわかりやすく説明してください。
+https://github.com/Eunho-J/codex-troller の README-LLM.md を読み、現在の会話言語（日本語）で codex-troller が何をするものか、なぜ必要か、ワークフローがどう動くかをわかりやすく説明してください。
 ```
 
 インストールプロンプト:
 
 ```text
-https://github.com/Eunho-J/codex-troller の README-LLM.md を読み、まず必須確認事項を私に質問したうえで、codex-troller のインストールと設定を最後まで実行してください。
+https://github.com/Eunho-J/codex-troller の README-LLM.md を読み、現在の会話言語（日本語）でまず必須確認事項を私に質問したうえで、codex-troller のインストールと設定を最後まで実行してください。
 ```
 
 ## プロジェクト概要

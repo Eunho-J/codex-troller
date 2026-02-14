@@ -15,13 +15,13 @@
 说明提示词:
 
 ```text
-请阅读 https://github.com/Eunho-J/codex-troller 的 README-LLM.md，并用通俗语言说明 codex-troller 是做什么的、为什么需要它、以及工作流如何运行。
+请阅读 https://github.com/Eunho-J/codex-troller 的 README-LLM.md，并使用当前对话语言（中文）说明 codex-troller 是做什么的、为什么需要它、以及工作流如何运行。
 ```
 
 安装提示词:
 
 ```text
-请阅读 https://github.com/Eunho-J/codex-troller 的 README-LLM.md，先向我确认必需的确认项，然后把 codex-troller 的安装与配置完整执行到结束。
+请阅读 https://github.com/Eunho-J/codex-troller 的 README-LLM.md，并使用当前对话语言（中文）先向我确认必需的确认项，然后把 codex-troller 的安装与配置完整执行到结束。
 ```
 
 ## 项目概览

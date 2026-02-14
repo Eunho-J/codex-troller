@@ -15,13 +15,13 @@ Use the prompts below.
 Explanation prompt:
 
 ```text
-Read README-LLM.md in https://github.com/Eunho-J/codex-troller and explain what codex-troller does, why it exists, and how the workflow works in plain language.
+Read README-LLM.md in https://github.com/Eunho-J/codex-troller and explain what codex-troller does, why it exists, and how the workflow works in the same language I am using in this chat.
 ```
 
 Installation prompt:
 
 ```text
-Read README-LLM.md in https://github.com/Eunho-J/codex-troller, ask me the required confirmations first, then install and configure codex-troller end-to-end.
+Read README-LLM.md in https://github.com/Eunho-J/codex-troller, ask me the required confirmations in the same language I am using in this chat, then install and configure codex-troller end-to-end.
 ```
 
 ## What This Project Is

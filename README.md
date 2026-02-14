@@ -1,14 +1,16 @@
 # codex-troller MCP Local Server
 
-Language docs:
-- English: `README.md`
-- Korean: `README.ko.md`
-- Japanese: `README.ja.md`
-- Chinese: `README.zh.md`
-- Design notes (EN): `mcp-server-discussion.md`
-- Design notes (KO): `mcp-server-discussion.ko.md`
-- Design notes (JA): `mcp-server-discussion.ja.md`
-- Design notes (ZH): `mcp-server-discussion.zh.md`
+Guides:
+- [English Guide](README.md)
+- [한국어 가이드](README.ko.md)
+- [日本語ガイド](README.ja.md)
+- [中文指南](README.zh.md)
+
+Design notes:
+- [English Design Notes](mcp-server-discussion.md)
+- [한국어 설계 노트](mcp-server-discussion.ko.md)
+- [日本語設計ノート](mcp-server-discussion.ja.md)
+- [中文设计说明](mcp-server-discussion.zh.md)
 
 ## Install (MCP Server, Not Skill)
 

@@ -1,91 +1,81 @@
 # Codex MCP 服务器设计说明
 
-此文档为中文设计说明。
-下方包含与 `mcp-server-discussion.md` 同步的完整正文（英文）。
+英文版（`mcp-server-discussion.md`）是活动设计说明的基准。
+本文件是同步后的中文翻译版本。
 
----
+## 运行规则
 
-# Codex MCP Server Discussion
+- 本文件是持续演进的设计日志，不是固定最终规格。
+- 有新决策时要立即更新。
+- 不要在长会话后集中补记，应按增量实时落盘。
 
-English is the canonical language for active design notes.
-Translated archives are preserved at:
-- `mcp-server-discussion.ko.md`
-- `mcp-server-discussion.ja.md`
-- `mcp-server-discussion.zh.md`
+## 问题定义
 
-## Operating rule
+- 用户通常从模糊目标开始。
+- 没有结构化澄清就直接执行，会导致偏差和返工。
+- 当意图、计划、执行连接薄弱时，可靠性会下降。
 
-- This is a living design log, not a fixed final spec.
-- Update this file immediately when decisions are made.
-- Do not batch-update after long sessions; persist incremental decisions.
+## 产品目标
 
-## Problem statement
+构建一个本地 Go MCP 服务器，通过以下机制提升 Codex 可靠性：
+- 结构化意图采集，
+- 分阶段计划/执行/验证，
+- 显式用户批准门禁，
+- 可恢复的持久化续跑能力。
 
-- Users often start with ambiguous goals.
-- Direct execution without structured clarification causes mismatch and rework.
-- Reliability drops when intent, plan, and execution are weakly connected.
+## 核心原则
 
-## Product goal
+- 意图对齐优先于输出速度。
+- 小步确认 + 快速反馈。
+- 在敏感边界保留人工控制。
+- 使用可追溯状态的可复现实工作流。
+- 可恢复的失败闭环。
+- 默认最小权限执行。
 
-Build a local Go MCP server that improves Codex reliability by enforcing:
-- structured intent capture,
-- staged planning/execution/verification,
-- explicit user approval gates,
-- persistent resumability.
+## 当前架构摘要
 
-## Core principles
+- 强制执行工作流状态机。
+- 会话持久化采用 JSON + SQLite。
+- `generate_plan` 前必须完成 council 规划。
+- 咨询循环按“每轮一个聚焦问题”细化需求。
+- UI/UX 任务在满足条件时必须通过视觉评审门禁。
+- 最终完成必须有显式用户批准。
 
-- Intent alignment over output speed.
-- Small commitments with fast feedback.
-- Human control at sensitive boundaries.
-- Reproducible workflow with traceable state.
-- Recoverable failure loops.
-- Least-privilege execution defaults.
+## 动态 council 团队
 
-## Current architecture summary
+- Council 管理者按会话范围管理（`council_managers`）。
+- 团队可通过以下方式配置：
+  - `council_configure_team`（`append|replace|remove`）
+  - 在 `council_start_briefing` 中一次性更新（`manager_mode`, `managers`）
+- 议题参与/关闭校验基于当前会话中的活跃管理者，而非硬编码角色列表。
 
-- Workflow state machine is enforced.
-- Session persistence uses JSON + SQLite.
-- Council-based planning is mandatory before `generate_plan`.
-- Consultant loop refines requirements with one focused question per turn.
-- Visual review gate is conditionally required for UI/UX tasks.
-- Final completion requires explicit user approval.
+## 安装策略
 
-## Dynamic council team
+`make agent-install` 包含强制同意/访谈门禁：
 
-- Council managers are session-scoped (`council_managers`).
-- Team can be configured by:
-  - `council_configure_team` (`append|replace|remove`)
-  - one-shot update via `council_start_briefing` (`manager_mode`, `managers`)
-- Topic participation/closure checks use active session managers, not a hardcoded role list.
+1. 条款同意（必需）
+   - 软件尚未得到充分验证
+   - 问题/损失责任由用户承担
+   - 已确认 GNU GPL v3.0 许可
+2. 安装范围选择（`global` 或 `local`）
+3. 可选 Playwright MCP 注册
+4. 初始专业度问卷画像采集
 
-## Installer policy
+安装器会写入默认用户画像，并完成运行时 launcher 绑定。
 
-`make agent-install` includes mandatory consent/interview gates:
+## 模型路由基线
 
-1. Terms consent (required)
-   - software is not sufficiently validated
-   - user assumes responsibility for issues/damages
-   - GNU GPL v3.0 acknowledged
-2. Install scope selection (`global` or `local`)
-3. Optional Playwright MCP registration
-4. Initial expertise survey profile capture
+- 咨询角色：`gpt-5.2`
+- 编排/评审角色：`gpt-5.3-codex`
+- 执行角色：`gpt-5.3-codex-spark`
 
-The installer writes a default user profile and runtime launcher wiring.
+## 验证基线
 
-## Model routing baseline
+- 必须通过 `make test`。
+- 必须通过 `make smoke`。
+- 安装器变更必须同时支持交互与非交互路径。
 
-- Client interview: `gpt-5.2`
-- Orchestrator/reviewer: `gpt-5.3-codex`
-- Worker: `gpt-5.3-codex-spark`
+## 后续更新原则
 
-## Validation baseline
-
-- `make test` must pass.
-- `make smoke` must pass.
-- Installer changes must support both interactive and non-interactive paths.
-
-## Next updates
-
-- Keep this file English-only.
-- If Korean documentation is needed, update `*.ko.md` counterparts in parallel.
+- 以英文文档为主线维护。
+- 如需中文文档，同步更新 `*.zh.md` 对应文件。

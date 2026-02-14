@@ -1,91 +1,81 @@
 # Codex MCP 서버 설계 토론
 
-이 문서는 한국어 설계 노트입니다.
-아래에 `mcp-server-discussion.md`와 동기화된 전체 본문(영문)을 포함합니다.
+영어 버전(`mcp-server-discussion.md`)이 활성 설계 노트의 기준입니다.
+이 문서는 동기화된 한국어 번역본입니다.
 
----
+## 운영 규칙
 
-# Codex MCP Server Discussion
+- 이 문서는 고정 최종 명세가 아니라 살아있는 설계 로그입니다.
+- 의사결정이 발생하면 즉시 업데이트합니다.
+- 긴 세션 후 일괄 갱신하지 말고, 증분 단위로 바로 기록합니다.
 
-English is the canonical language for active design notes.
-Translated archives are preserved at:
-- `mcp-server-discussion.ko.md`
-- `mcp-server-discussion.ja.md`
-- `mcp-server-discussion.zh.md`
+## 문제 정의
 
-## Operating rule
+- 사용자는 대체로 모호한 목표로 시작합니다.
+- 구조화된 구체화 없이 바로 실행하면 불일치와 재작업이 발생합니다.
+- 의도, 계획, 실행의 연결이 약하면 신뢰도가 하락합니다.
 
-- This is a living design log, not a fixed final spec.
-- Update this file immediately when decisions are made.
-- Do not batch-update after long sessions; persist incremental decisions.
+## 제품 목표
 
-## Problem statement
+Codex 신뢰도를 높이는 로컬 Go MCP 서버를 구축합니다. 핵심은 아래를 강제하는 것입니다.
+- 구조화된 의도 수집,
+- 단계적 계획/실행/검증,
+- 명시적 사용자 승인 게이트,
+- 재개 가능한 지속 상태.
 
-- Users often start with ambiguous goals.
-- Direct execution without structured clarification causes mismatch and rework.
-- Reliability drops when intent, plan, and execution are weakly connected.
+## 핵심 원칙
 
-## Product goal
+- 출력 속도보다 의도 정합성.
+- 작은 단위 확정과 빠른 피드백.
+- 민감한 경계에서의 인간 통제.
+- 추적 가능한 상태를 가진 재현 가능한 워크플로우.
+- 복구 가능한 실패 루프.
+- 최소 권한 기본 실행.
 
-Build a local Go MCP server that improves Codex reliability by enforcing:
-- structured intent capture,
-- staged planning/execution/verification,
-- explicit user approval gates,
-- persistent resumability.
+## 현재 아키텍처 요약
 
-## Core principles
+- 워크플로우 상태 머신을 강제합니다.
+- 세션 영속화는 JSON + SQLite를 사용합니다.
+- `generate_plan` 이전에 council 기반 기획을 필수로 둡니다.
+- 상담 루프는 턴당 1개의 집중 질문으로 요구사항을 다듬습니다.
+- UI/UX 작업에서는 조건부로 시각 검토 게이트를 요구합니다.
+- 최종 완료에는 명시적 사용자 승인이 필요합니다.
 
-- Intent alignment over output speed.
-- Small commitments with fast feedback.
-- Human control at sensitive boundaries.
-- Reproducible workflow with traceable state.
-- Recoverable failure loops.
-- Least-privilege execution defaults.
+## 동적 council 팀
 
-## Current architecture summary
-
-- Workflow state machine is enforced.
-- Session persistence uses JSON + SQLite.
-- Council-based planning is mandatory before `generate_plan`.
-- Consultant loop refines requirements with one focused question per turn.
-- Visual review gate is conditionally required for UI/UX tasks.
-- Final completion requires explicit user approval.
-
-## Dynamic council team
-
-- Council managers are session-scoped (`council_managers`).
-- Team can be configured by:
+- Council 팀장은 세션 범위(`council_managers`)로 관리됩니다.
+- 팀 구성 방법:
   - `council_configure_team` (`append|replace|remove`)
-  - one-shot update via `council_start_briefing` (`manager_mode`, `managers`)
-- Topic participation/closure checks use active session managers, not a hardcoded role list.
+  - `council_start_briefing`에서 원샷 업데이트 (`manager_mode`, `managers`)
+- 안건 참여/종결 검사는 하드코딩 역할 목록이 아니라 활성 세션 팀장을 기준으로 동작합니다.
 
-## Installer policy
+## 설치 정책
 
-`make agent-install` includes mandatory consent/interview gates:
+`make agent-install`은 필수 동의/인터뷰 게이트를 포함합니다.
 
-1. Terms consent (required)
-   - software is not sufficiently validated
-   - user assumes responsibility for issues/damages
-   - GNU GPL v3.0 acknowledged
-2. Install scope selection (`global` or `local`)
-3. Optional Playwright MCP registration
-4. Initial expertise survey profile capture
+1. 약관 동의 (필수)
+   - 소프트웨어는 충분히 검증되지 않았음
+   - 문제/손해에 대한 책임은 사용자에게 있음
+   - GNU GPL v3.0 라이선스를 인지함
+2. 설치 범위 선택 (`global` 또는 `local`)
+3. Playwright MCP 등록(선택)
+4. 초기 전문성 설문 프로필 수집
 
-The installer writes a default user profile and runtime launcher wiring.
+설치기는 기본 사용자 프로필과 런타임 런처 연결을 기록합니다.
 
-## Model routing baseline
+## 모델 라우팅 기준선
 
-- Client interview: `gpt-5.2`
-- Orchestrator/reviewer: `gpt-5.3-codex`
-- Worker: `gpt-5.3-codex-spark`
+- 상담가: `gpt-5.2`
+- 오케스트레이터/리뷰어: `gpt-5.3-codex`
+- 작업자: `gpt-5.3-codex-spark`
 
-## Validation baseline
+## 검증 기준선
 
-- `make test` must pass.
-- `make smoke` must pass.
-- Installer changes must support both interactive and non-interactive paths.
+- `make test` 통과 필수.
+- `make smoke` 통과 필수.
+- 설치기 변경은 대화형/비대화형 경로 모두 지원해야 함.
 
-## Next updates
+## 다음 업데이트 원칙
 
-- Keep this file English-only.
-- If Korean documentation is needed, update `*.ko.md` counterparts in parallel.
+- 영어 문서를 기준으로 유지합니다.
+- 한국어 문서가 필요하면 `*.ko.md` 대응 문서를 병렬 업데이트합니다.

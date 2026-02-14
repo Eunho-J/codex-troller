@@ -1,87 +1,87 @@
 # codex-troller MCP ローカルサーバー
 
-この文書は日本語ガイドです。
-以下に `README.md` と同期された全文（英語）を含みます。
-
----
-
-# codex-troller MCP Local Server
-
-Guides:
+ガイド:
 - [English Guide](README.md)
 - [한국어 가이드](README.ko.md)
 - [日本語ガイド](README.ja.md)
 - [中文指南](README.zh.md)
 
-Design notes:
+設計ノート:
 - [English Design Notes](mcp-server-discussion.md)
 - [한국어 설계 노트](mcp-server-discussion.ko.md)
 - [日本語設計ノート](mcp-server-discussion.ja.md)
 - [中文设计说明](mcp-server-discussion.zh.md)
 
-## Install (MCP Server, Not Skill)
+## インストール (MCP サーバー、スキルではない)
 
-This repository is an MCP server project, **not** a Codex skill package.
-Do **not** use `skill-installer` for this repository.
+このリポジトリは Codex スキルパッケージではなく、**MCP サーバープロジェクト**です。
+既定かつ推奨の方法は LLM 主導インストールです。
+このリポジトリに `skill-installer` は使わないでください。
 
-Copy/paste install command:
+既定の Codex エージェントに次のプロンプトを貼り付けてください:
 
-```bash
-git clone https://github.com/Eunho-J/codex-troller.git
-cd codex-troller
-AGENT_INSTALL_NON_INTERACTIVE=1 INSTALL_TERMS_AGREED=yes INSTALL_SCOPE=global INSTALL_PLAYWRIGHT_MCP=no make agent-install
+```text
+Install `codex-troller` from `https://github.com/Eunho-J/codex-troller`.
+
+Requirements:
+- Treat this repository as an MCP server project, not a skill package.
+- Do not use `skill-installer`.
+- Read and follow this repository `README.md` install/setup steps.
+- Run interactive `make agent-install` (terms consent, install scope, optional Playwright MCP registration, expertise survey).
+- Run `make setup` and verify with `make smoke`.
+- If a step fails, resolve it and continue until installation and smoke verification both pass.
 ```
 
-`codex-troller` is a local Go MCP server for Codex CLI.
-Its purpose is to structure work for higher reliability and better intent alignment.
+`codex-troller` は Codex CLI 向けのローカル Go MCP サーバーです。
+目的は、作業を構造化して信頼性と意図整合性を高めることです。
 
-## Core concept
+## コアコンセプト
 
-- Session workflow:
+- セッションワークフロー:
   - `received -> intent_captured -> (council_briefing/discussion/finalized) -> plan_generated -> mockup_ready -> plan_approved -> action_executed -> verify_run -> visual_review -> record_user_feedback -> summarized`
-- Default flow:
-  - intent capture -> council draft -> consultant clarification loop -> plan/mockup -> execution -> verification -> user approval
-- Dynamic council team:
-  - team leads are session-scoped and can be appended/replaced/removed
-- Persistent execution:
-  - state is stored in JSON + SQLite and can be reconciled with repo footprint
-- Visual review gate:
-  - when render-capable MCP tools are detected for UI/UX tasks, `visual_review` is required before final user approval
+- 既定フロー:
+  - 意図収集 -> council 下書き -> 相談ループで明確化 -> 計画/モックアップ -> 実行 -> 検証 -> ユーザー承認
+- 動的 council チーム:
+  - チームリードはセッション単位で、append/replace/remove が可能
+- 永続実行:
+  - 状態は JSON + SQLite に保存され、リポジトリ footprint と reconcile できる
+- ビジュアルレビューゲート:
+  - UI/UX タスクで描画可能 MCP ツールが検出された場合、最終承認前に `visual_review` が必須
 
-## Quick start
+## クイックスタート
 
 ```bash
-make agent-install   # interactive install: terms -> scope(global/local) -> Playwright MCP consent -> expertise survey
-make setup          # build + test + smoke + install hooks
-make build          # bootstraps local Go toolchain if missing
-make test           # unit tests
-make smoke          # JSON-RPC end-to-end smoke test
-make install-hooks  # install git hooks
-make run-binary     # run built binary (.codex-mcp/bin/codex-mcp)
-# or
+make agent-install   # 対話型インストール: 規約 -> 範囲(global/local) -> Playwright MCP 同意 -> 専門性アンケート
+make setup          # build + test + smoke + フック導入
+make build          # Go が無い場合はローカル Go ツールチェーンを bootstrap
+make test           # 単体テスト
+make smoke          # JSON-RPC end-to-end スモークテスト
+make install-hooks  # git フック導入
+make run-binary     # ビルド済みバイナリ実行 (.codex-mcp/bin/codex-mcp)
+# または
 make run-local      # bootstrap + build + run
 ```
 
-After install, you can trigger `$codex-troller-autostart` from Codex.
+インストール後、Codex から `$codex-troller-autostart` を呼び出せます。
 
-## Installer behavior
+## インストーラーの挙動
 
-`make agent-install` enforces:
+`make agent-install` は次を強制します。
 
-1. Terms consent gate (required)
-   - software is not sufficiently validated
-   - user assumes responsibility for issues/damages
-   - user acknowledges GNU GPL v3.0 license
-2. Install scope selection
-   - `global` (`~/.codex/...`) or `local` (`<repo>/.codex/...`)
-3. Optional Playwright MCP registration
+1. 規約同意ゲート (必須)
+   - ソフトウェアは十分に検証されていない
+   - 問題/損害の責任は利用者が負う
+   - GNU GPL v3.0 ライセンスを認識
+2. インストール範囲の選択
+   - `global` (`~/.codex/...`) または `local` (`<repo>/.codex/...`)
+3. Playwright MCP 登録（任意）
    - source: `https://github.com/microsoft/playwright-mcp`
-4. Initial user expertise survey
+4. 初期ユーザー専門性アンケート
    - `overall`, `response_need`, `technical_depth`, `domain_knowledge`
-5. Default profile persistence
-   - profile file is injected at runtime via launcher env var
+5. 既定プロファイル保存
+   - ランタイムで launcher 環境変数を通して注入
 
-Non-interactive mode:
+非対話モード:
 
 ```bash
 AGENT_INSTALL_NON_INTERACTIVE=1 \
@@ -95,7 +95,7 @@ INSTALL_PROFILE_DOMAIN_HINTS="backend,security" \
 make agent-install
 ```
 
-## Manual run examples
+## 手動実行例
 
 ```bash
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | .codex-mcp/bin/codex-mcp
@@ -107,13 +107,13 @@ cat <<'EOF2' | .codex-mcp/bin/codex-mcp
 EOF2
 ```
 
-## Process verification
+## プロセス検証
 
-- Unit tests: `make test`
-- End-to-end smoke: `make smoke`
-- Smoke validates the full route including council consensus and final user approval gate.
+- 単体テスト: `make test`
+- end-to-end スモーク: `make smoke`
+- スモークは council 合意と最終ユーザー承認ゲートを含む全ルートを検証します。
 
-Smoke environment variables:
+スモーク環境変数:
 - `SMOKE_GOAL`
 - `SMOKE_SCOPE`
 - `SMOKE_CONSTRAINT`
@@ -122,9 +122,9 @@ Smoke environment variables:
 - `SMOKE_AVAILABLE_MCPS`
 - `SMOKE_AVAILABLE_MCP_TOOLS`
 
-## Available tools
+## 利用可能ツール
 
-### Workflow
+### ワークフロー
 
 - `start_interview`
 - `ingest_intent`
@@ -155,7 +155,7 @@ Smoke environment variables:
 - `summarize`
 - `get_session_status`
 
-### Git helpers
+### Git ヘルパー
 
 - `git_get_state`
 - `git_diff_symbols`
@@ -164,15 +164,15 @@ Smoke environment variables:
 - `git_bisect_start`
 - `git_recover_state`
 
-## Runtime state
+## ランタイム状態
 
-- Session state: `.codex-mcp/state/sessions.json`
-- Council DB: `.codex-mcp/state/council.db`
-- Installer profile (default):
+- セッション状態: `.codex-mcp/state/sessions.json`
+- council DB: `.codex-mcp/state/council.db`
+- インストーラープロファイル（既定）:
   - global: `~/.codex/codex-troller/default_user_profile.json`
   - local: `<repo>/.codex/codex-troller/default_user_profile.json`
 
-## Dynamic council team example
+## 動的 council チーム例
 
 ```json
 {
@@ -189,8 +189,8 @@ Smoke environment variables:
 }
 ```
 
-## Agent routing defaults
+## エージェントルーティング既定値
 
-- Client interview: `gpt-5.2`
-- Orchestrator/reviewer: `gpt-5.3-codex`
-- Worker (function/module implementation): `gpt-5.3-codex-spark`
+- クライアント面談: `gpt-5.2`
+- オーケストレーター/レビュアー: `gpt-5.3-codex`
+- ワーカー（関数/モジュール実装）: `gpt-5.3-codex-spark`

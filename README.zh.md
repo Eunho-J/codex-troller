@@ -1,87 +1,87 @@
 # codex-troller MCP 本地服务器
 
-此文档为中文指南。
-下方包含与 `README.md` 同步的完整正文（英文）。
-
----
-
-# codex-troller MCP Local Server
-
-Guides:
+指南:
 - [English Guide](README.md)
 - [한국어 가이드](README.ko.md)
 - [日本語ガイド](README.ja.md)
 - [中文指南](README.zh.md)
 
-Design notes:
+设计说明:
 - [English Design Notes](mcp-server-discussion.md)
 - [한국어 설계 노트](mcp-server-discussion.ko.md)
 - [日本語設計ノート](mcp-server-discussion.ja.md)
 - [中文设计说明](mcp-server-discussion.zh.md)
 
-## Install (MCP Server, Not Skill)
+## 安装（MCP 服务器，不是 Skill）
 
-This repository is an MCP server project, **not** a Codex skill package.
-Do **not** use `skill-installer` for this repository.
+本仓库是 **MCP 服务器项目**，不是 Codex skill 包。
+默认且推荐路径是 LLM 驱动安装。
+请不要对本仓库使用 `skill-installer`。
 
-Copy/paste install command:
+请将下列提示词复制到你的默认 Codex agent：
 
-```bash
-git clone https://github.com/Eunho-J/codex-troller.git
-cd codex-troller
-AGENT_INSTALL_NON_INTERACTIVE=1 INSTALL_TERMS_AGREED=yes INSTALL_SCOPE=global INSTALL_PLAYWRIGHT_MCP=no make agent-install
+```text
+Install `codex-troller` from `https://github.com/Eunho-J/codex-troller`.
+
+Requirements:
+- Treat this repository as an MCP server project, not a skill package.
+- Do not use `skill-installer`.
+- Read and follow this repository `README.md` install/setup steps.
+- Run interactive `make agent-install` (terms consent, install scope, optional Playwright MCP registration, expertise survey).
+- Run `make setup` and verify with `make smoke`.
+- If a step fails, resolve it and continue until installation and smoke verification both pass.
 ```
 
-`codex-troller` is a local Go MCP server for Codex CLI.
-Its purpose is to structure work for higher reliability and better intent alignment.
+`codex-troller` 是面向 Codex CLI 的本地 Go MCP 服务器。
+目标是通过结构化流程提升可靠性与用户意图对齐程度。
 
-## Core concept
+## 核心概念
 
-- Session workflow:
+- 会话流程:
   - `received -> intent_captured -> (council_briefing/discussion/finalized) -> plan_generated -> mockup_ready -> plan_approved -> action_executed -> verify_run -> visual_review -> record_user_feedback -> summarized`
-- Default flow:
-  - intent capture -> council draft -> consultant clarification loop -> plan/mockup -> execution -> verification -> user approval
-- Dynamic council team:
-  - team leads are session-scoped and can be appended/replaced/removed
-- Persistent execution:
-  - state is stored in JSON + SQLite and can be reconciled with repo footprint
-- Visual review gate:
-  - when render-capable MCP tools are detected for UI/UX tasks, `visual_review` is required before final user approval
+- 默认路径:
+  - 意图收集 -> council 草案 -> 咨询细化循环 -> 计划/原型 -> 执行 -> 验证 -> 用户确认
+- 动态 council 团队:
+  - team lead 按会话配置，可 append/replace/remove
+- 持久执行:
+  - 状态保存为 JSON + SQLite，并可与仓库 footprint 进行 reconcile
+- 可视化评审门禁:
+  - 在 UI/UX 任务中检测到可渲染 MCP 工具时，最终批准前必须完成 `visual_review`
 
-## Quick start
+## 快速开始
 
 ```bash
-make agent-install   # interactive install: terms -> scope(global/local) -> Playwright MCP consent -> expertise survey
-make setup          # build + test + smoke + install hooks
-make build          # bootstraps local Go toolchain if missing
-make test           # unit tests
-make smoke          # JSON-RPC end-to-end smoke test
-make install-hooks  # install git hooks
-make run-binary     # run built binary (.codex-mcp/bin/codex-mcp)
-# or
+make agent-install   # 交互式安装: 条款 -> 范围(global/local) -> Playwright MCP 同意 -> 专业度问卷
+make setup          # build + test + smoke + 安装 hooks
+make build          # 若缺少 Go，会自动 bootstrap 本地 Go 工具链
+make test           # 单元测试
+make smoke          # JSON-RPC 端到端 smoke 测试
+make install-hooks  # 安装 git hooks
+make run-binary     # 运行已构建二进制 (.codex-mcp/bin/codex-mcp)
+# 或
 make run-local      # bootstrap + build + run
 ```
 
-After install, you can trigger `$codex-troller-autostart` from Codex.
+安装后可在 Codex 中调用 `$codex-troller-autostart`。
 
-## Installer behavior
+## 安装器行为
 
-`make agent-install` enforces:
+`make agent-install` 会强制执行：
 
-1. Terms consent gate (required)
-   - software is not sufficiently validated
-   - user assumes responsibility for issues/damages
-   - user acknowledges GNU GPL v3.0 license
-2. Install scope selection
-   - `global` (`~/.codex/...`) or `local` (`<repo>/.codex/...`)
-3. Optional Playwright MCP registration
+1. 条款同意门禁（必需）
+   - 软件尚未充分验证
+   - 问题/损失责任由用户承担
+   - 已确认 GNU GPL v3.0 许可证
+2. 安装范围选择
+   - `global`（`~/.codex/...`）或 `local`（`<repo>/.codex/...`）
+3. Playwright MCP 注册（可选）
    - source: `https://github.com/microsoft/playwright-mcp`
-4. Initial user expertise survey
+4. 初始用户专业度问卷
    - `overall`, `response_need`, `technical_depth`, `domain_knowledge`
-5. Default profile persistence
-   - profile file is injected at runtime via launcher env var
+5. 默认用户画像持久化
+   - 运行时通过 launcher 环境变量注入画像文件
 
-Non-interactive mode:
+非交互模式：
 
 ```bash
 AGENT_INSTALL_NON_INTERACTIVE=1 \
@@ -95,7 +95,7 @@ INSTALL_PROFILE_DOMAIN_HINTS="backend,security" \
 make agent-install
 ```
 
-## Manual run examples
+## 手动运行示例
 
 ```bash
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | .codex-mcp/bin/codex-mcp
@@ -107,13 +107,13 @@ cat <<'EOF2' | .codex-mcp/bin/codex-mcp
 EOF2
 ```
 
-## Process verification
+## 流程验证
 
-- Unit tests: `make test`
-- End-to-end smoke: `make smoke`
-- Smoke validates the full route including council consensus and final user approval gate.
+- 单元测试: `make test`
+- 端到端 smoke: `make smoke`
+- smoke 会验证包含 council 共识与最终用户批准门禁在内的完整路径。
 
-Smoke environment variables:
+smoke 环境变量：
 - `SMOKE_GOAL`
 - `SMOKE_SCOPE`
 - `SMOKE_CONSTRAINT`
@@ -122,9 +122,9 @@ Smoke environment variables:
 - `SMOKE_AVAILABLE_MCPS`
 - `SMOKE_AVAILABLE_MCP_TOOLS`
 
-## Available tools
+## 可用工具
 
-### Workflow
+### 工作流
 
 - `start_interview`
 - `ingest_intent`
@@ -155,7 +155,7 @@ Smoke environment variables:
 - `summarize`
 - `get_session_status`
 
-### Git helpers
+### Git 辅助工具
 
 - `git_get_state`
 - `git_diff_symbols`
@@ -164,15 +164,15 @@ Smoke environment variables:
 - `git_bisect_start`
 - `git_recover_state`
 
-## Runtime state
+## 运行时状态
 
-- Session state: `.codex-mcp/state/sessions.json`
-- Council DB: `.codex-mcp/state/council.db`
-- Installer profile (default):
+- 会话状态: `.codex-mcp/state/sessions.json`
+- council 数据库: `.codex-mcp/state/council.db`
+- 安装器默认画像:
   - global: `~/.codex/codex-troller/default_user_profile.json`
   - local: `<repo>/.codex/codex-troller/default_user_profile.json`
 
-## Dynamic council team example
+## 动态 council 团队示例
 
 ```json
 {
@@ -189,8 +189,8 @@ Smoke environment variables:
 }
 ```
 
-## Agent routing defaults
+## Agent 路由默认值
 
-- Client interview: `gpt-5.2`
-- Orchestrator/reviewer: `gpt-5.3-codex`
-- Worker (function/module implementation): `gpt-5.3-codex-spark`
+- 客户访谈: `gpt-5.2`
+- 编排/评审: `gpt-5.3-codex`
+- 工作者（函数/模块实现）: `gpt-5.3-codex-spark`

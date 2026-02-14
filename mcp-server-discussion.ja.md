@@ -1,91 +1,81 @@
 # Codex MCP サーバー設計ノート
 
-この文書は日本語設計ノートです。
-以下に `mcp-server-discussion.md` と同期された全文（英語）を含みます。
+英語版（`mcp-server-discussion.md`）をアクティブ設計ノートの基準とします。
+この文書は同期済みの日本語翻訳版です。
 
----
+## 運用ルール
 
-# Codex MCP Server Discussion
+- この文書は固定の最終仕様ではなく、継続更新する設計ログです。
+- 意思決定が発生したら即時更新します。
+- 長いセッション後にまとめて更新せず、増分で記録します。
 
-English is the canonical language for active design notes.
-Translated archives are preserved at:
-- `mcp-server-discussion.ko.md`
-- `mcp-server-discussion.ja.md`
-- `mcp-server-discussion.zh.md`
+## 問題定義
 
-## Operating rule
+- ユーザーは曖昧な目標から始めることが多いです。
+- 構造化された明確化なしで直接実行すると、不一致と手戻りが発生します。
+- 意図・計画・実行の結び付きが弱いと信頼性が低下します。
 
-- This is a living design log, not a fixed final spec.
-- Update this file immediately when decisions are made.
-- Do not batch-update after long sessions; persist incremental decisions.
+## プロダクト目標
 
-## Problem statement
+Codex の信頼性を高めるローカル Go MCP サーバーを構築します。必須要件は以下です。
+- 構造化された意図取得、
+- 段階的な計画/実行/検証、
+- 明示的なユーザー承認ゲート、
+- 再開可能な永続状態。
 
-- Users often start with ambiguous goals.
-- Direct execution without structured clarification causes mismatch and rework.
-- Reliability drops when intent, plan, and execution are weakly connected.
+## コア原則
 
-## Product goal
+- 出力速度より意図整合性を優先。
+- 小さな確定と高速フィードバック。
+- センシティブ境界での人間による統制。
+- 追跡可能な状態を持つ再現可能ワークフロー。
+- 回復可能な失敗ループ。
+- 最小権限の実行デフォルト。
 
-Build a local Go MCP server that improves Codex reliability by enforcing:
-- structured intent capture,
-- staged planning/execution/verification,
-- explicit user approval gates,
-- persistent resumability.
+## 現在のアーキテクチャ要約
 
-## Core principles
+- ワークフロー状態機械を強制します。
+- セッション永続化は JSON + SQLite を使用します。
+- `generate_plan` 前に council ベースの企画を必須化します。
+- 相談ループは 1 ターン 1 問の集中質問で要件を精緻化します。
+- UI/UX タスクでは条件付きでビジュアルレビューゲートを要求します。
+- 最終完了には明示的なユーザー承認が必要です。
 
-- Intent alignment over output speed.
-- Small commitments with fast feedback.
-- Human control at sensitive boundaries.
-- Reproducible workflow with traceable state.
-- Recoverable failure loops.
-- Least-privilege execution defaults.
+## 動的 council チーム
 
-## Current architecture summary
+- Council マネージャーはセッションスコープ（`council_managers`）です。
+- チーム構成方法:
+  - `council_configure_team`（`append|replace|remove`）
+  - `council_start_briefing` でのワンショット更新（`manager_mode`, `managers`）
+- トピック参加/クローズ判定は固定ロール一覧ではなく、アクティブなセッション管理者で行います。
 
-- Workflow state machine is enforced.
-- Session persistence uses JSON + SQLite.
-- Council-based planning is mandatory before `generate_plan`.
-- Consultant loop refines requirements with one focused question per turn.
-- Visual review gate is conditionally required for UI/UX tasks.
-- Final completion requires explicit user approval.
+## インストーラーポリシー
 
-## Dynamic council team
+`make agent-install` には必須の同意/ヒアリングゲートを含めます。
 
-- Council managers are session-scoped (`council_managers`).
-- Team can be configured by:
-  - `council_configure_team` (`append|replace|remove`)
-  - one-shot update via `council_start_briefing` (`manager_mode`, `managers`)
-- Topic participation/closure checks use active session managers, not a hardcoded role list.
+1. 規約同意（必須）
+   - ソフトウェアは十分に検証されていない
+   - 問題/損害の責任はユーザーが負う
+   - GNU GPL v3.0 を認識済み
+2. インストール範囲選択（`global` または `local`）
+3. Playwright MCP 登録（任意）
+4. 初期専門性アンケートのプロファイル取得
 
-## Installer policy
+インストーラーは既定ユーザープロファイルとランタイムランチャー連携を書き込みます。
 
-`make agent-install` includes mandatory consent/interview gates:
+## モデルルーティング基準
 
-1. Terms consent (required)
-   - software is not sufficiently validated
-   - user assumes responsibility for issues/damages
-   - GNU GPL v3.0 acknowledged
-2. Install scope selection (`global` or `local`)
-3. Optional Playwright MCP registration
-4. Initial expertise survey profile capture
+- 相談担当: `gpt-5.2`
+- オーケストレーター/レビュアー: `gpt-5.3-codex`
+- 実装担当: `gpt-5.3-codex-spark`
 
-The installer writes a default user profile and runtime launcher wiring.
+## 検証基準
 
-## Model routing baseline
+- `make test` は必須で成功。
+- `make smoke` は必須で成功。
+- インストーラー変更は対話/非対話の両経路をサポート。
 
-- Client interview: `gpt-5.2`
-- Orchestrator/reviewer: `gpt-5.3-codex`
-- Worker: `gpt-5.3-codex-spark`
+## 次回更新方針
 
-## Validation baseline
-
-- `make test` must pass.
-- `make smoke` must pass.
-- Installer changes must support both interactive and non-interactive paths.
-
-## Next updates
-
-- Keep this file English-only.
-- If Korean documentation is needed, update `*.ko.md` counterparts in parallel.
+- 英語文書を基準に維持します。
+- 日本語文書が必要な場合は `*.ja.md` 対応文書を並行更新します。

@@ -12,17 +12,24 @@ Design notes:
 - [日本語設計ノート](mcp-server-discussion.ja.md)
 - [中文设计说明](mcp-server-discussion.zh.md)
 
-## Install (MCP Server, Not Skill)
+## Install (Prompt-first, MCP Server Not Skill)
 
 This repository is an MCP server project, **not** a Codex skill package.
+The default and recommended path is LLM-driven installation.
 Do **not** use `skill-installer` for this repository.
 
-Copy/paste install command:
+Copy/paste this prompt to your default Codex agent:
 
-```bash
-git clone https://github.com/Eunho-J/codex-troller.git
-cd codex-troller
-AGENT_INSTALL_NON_INTERACTIVE=1 INSTALL_TERMS_AGREED=yes INSTALL_SCOPE=global INSTALL_PLAYWRIGHT_MCP=no make agent-install
+```text
+Install `codex-troller` from `https://github.com/Eunho-J/codex-troller`.
+
+Requirements:
+- Treat this repository as an MCP server project, not a skill package.
+- Do not use `skill-installer`.
+- Read and follow this repository `README.md` install/setup steps.
+- Run interactive `make agent-install` (terms consent, install scope, optional Playwright MCP registration, expertise survey).
+- Run `make setup` and verify with `make smoke`.
+- If a step fails, resolve it and continue until installation and smoke verification both pass.
 ```
 
 `codex-troller` is a local Go MCP server for Codex CLI.

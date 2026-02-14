@@ -1,13 +1,27 @@
 # codex-troller MCP Local Server
 
-English is the canonical documentation language in this repository.
-For translated docs, see:
-- `README.ja.md`
-- `README.zh.md`
-- `README.ko.md`
-- `mcp-server-discussion.ja.md`
-- `mcp-server-discussion.zh.md`
-- `mcp-server-discussion.ko.md`
+Language docs:
+- English: `README.md`
+- Korean: `README.ko.md`
+- Japanese: `README.ja.md`
+- Chinese: `README.zh.md`
+- Design notes (EN): `mcp-server-discussion.md`
+- Design notes (KO): `mcp-server-discussion.ko.md`
+- Design notes (JA): `mcp-server-discussion.ja.md`
+- Design notes (ZH): `mcp-server-discussion.zh.md`
+
+## Install (MCP Server, Not Skill)
+
+This repository is an MCP server project, **not** a Codex skill package.
+Do **not** use `skill-installer` for this repository.
+
+Copy/paste install command:
+
+```bash
+git clone https://github.com/Eunho-J/codex-troller.git
+cd codex-troller
+AGENT_INSTALL_NON_INTERACTIVE=1 INSTALL_TERMS_AGREED=yes INSTALL_SCOPE=global INSTALL_PLAYWRIGHT_MCP=no make agent-install
+```
 
 `codex-troller` is a local Go MCP server for Codex CLI.
 Its purpose is to structure work for higher reliability and better intent alignment.

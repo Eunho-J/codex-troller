@@ -68,11 +68,14 @@ Before running any install command, ask the user and wait for explicit answers.
 
 ## Command Execution Policy (mandatory)
 
-- Do not ask the user to manually execute installation commands.
 - Execute installation commands yourself, one by one.
 - For commands that may require elevated privileges, request execution approval first.
 - After approval, run the command and report result briefly.
 - If approval is denied, ask whether to skip or retry with a different method.
+- Exception for Linux OS package dependencies (apt):
+  - Do not run `sudo apt*` automatically.
+  - Ask the user to run required apt commands directly.
+  - Wait for user confirmation, then continue verification.
 - Install toolchain/runtime dependencies inside `<CODEX_HOME>/.codex-troller/deps` by default (Go, Node, Playwright assets).
 - Do not require persistent global environment variable setup for installation.
 
@@ -136,7 +139,7 @@ Use the following confirmation content in the user's language (semantic equivale
      - It enables browser automation and UI verification.
      - It is useful for web projects, E2E checks, and visual flow testing.
      - If selected, agent will run Playwright dependency installation commands step by step.
-     - On Linux, OS-level dependency installation may require elevated privileges.
+     - On Linux, OS-level dependency installation may require apt with sudo, which the user may need to run directly.
    - Ask with numbered options:
      - `1)` install/register Playwright MCP
      - `2)` skip Playwright MCP
@@ -337,11 +340,7 @@ EOF
 chmod +x "$BIN_DIR/playwright-mcp-launch"
 printf '\n[mcp_servers.playwright]\ncommand = "%s"\n' "$BIN_DIR/playwright-mcp-launch" >> "$CONFIG_PATH"
 ```
-- Linux: request permission, then run:
-```bash
-npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y playwright@latest install --with-deps chromium firefox webkit
-```
-- If denied or failed, run:
+- Install Playwright browser binaries first:
 ```bash
 npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y playwright@latest install chromium firefox webkit
 ```
@@ -349,10 +348,16 @@ npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSER
 ```bash
 npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y -p playwright node -e "const { chromium } = require('playwright'); (async()=>{ const b=await chromium.launch({headless:true, args:['--no-sandbox','--disable-setuid-sandbox']}); await b.close(); })();"
 ```
-- If verify fails, ask user:
-  1) retry dependency install, or
+- If verification reports missing Linux shared libraries, ask user to run apt commands directly (do not run `sudo apt*` automatically):
+```bash
+sudo apt-get update
+sudo "$NPX_BIN" -y playwright@latest install-deps chromium firefox webkit
+```
+- After user confirms apt step is done, rerun runtime verification.
+- If verification still fails, ask user:
+  1) retry apt dependency step, or
   2) skip Playwright.
-  Then execute choice and re-verify. Repeat until success or explicit skip.
+  Repeat until success or explicit skip.
 
 13. Write consent log
 ```bash
@@ -403,7 +408,7 @@ If any step fails:
 - explain the failure in plain language,
 - fix and retry automatically,
 - ask user only when a permission/risk decision is required.
-- do not redirect installation work to the user unless they explicitly choose manual mode.
+- for Linux apt OS dependencies, explicitly ask the user to run the required apt commands and confirm completion before retry.
 
 ## Completion Message Policy (mandatory)
 

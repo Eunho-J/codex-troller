@@ -7,7 +7,9 @@ Do not use `skill-installer` for this repository. This repository is an MCP serv
 
 - Always fetch the latest installation guide from:
   - `https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md`
-- If internet access is blocked/unavailable, ask the user for permission to enable network access first.
+- Before any remote/network command, request permission first via the platform approval tool-call.
+- Do not run probe commands first (for example, do not try `curl` once and ask permission only after failure).
+- If internet access is blocked/unavailable after approval, report the failure and ask whether to retry.
 - If network permission is denied, ask the user whether to:
   1) stop installation, or
   2) continue with local fallback (explicitly warn it may be stale).
@@ -72,6 +74,7 @@ Before running any install command, ask the user and wait for explicit answers.
 - For commands that may require elevated privileges, request execution approval first.
 - After approval, run the command and report result briefly.
 - If approval is denied, ask whether to skip or retry with a different method.
+- For remote fetch commands (`curl`, `wget`, `git clone` to internet), always request approval before first execution.
 - Exception for Linux OS package dependencies (apt):
   - Do not run `sudo apt*` automatically.
   - Ask the user to run required apt commands directly.
@@ -198,6 +201,7 @@ FETCH_DIR="$(mktemp -d)"
 ```
 
 4. Fetch source (zip preferred, git fallback)
+   - First request approval for network commands, then execute.
 ```bash
 if command -v curl >/dev/null 2>&1 && command -v unzip >/dev/null 2>&1; then
   curl -fsSL https://github.com/Eunho-J/codex-troller/archive/refs/heads/main.zip -o "$FETCH_DIR/codex-troller.zip"

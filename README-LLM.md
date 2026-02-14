@@ -3,6 +3,17 @@
 This document is for LLM agents that install and configure `codex-troller`.
 Do not use `skill-installer` for this repository. This repository is an MCP server project.
 
+## Source-of-Truth Policy (mandatory)
+
+- Always fetch the latest installation guide from:
+  - `https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md`
+- Do not treat a local `README-LLM.md` copy as source-of-truth by default.
+- If internet access is blocked/unavailable, ask the user for permission to enable network access first.
+- If network permission is denied, ask the user whether to:
+  1) stop installation, or
+  2) continue with local fallback (explicitly warn it may be stale).
+- Use latest GitHub repository content as installation source (`main.zip` or `git clone --depth 1`).
+
 ## Project Overview
 
 `codex-troller` is a local Go MCP server for Codex CLI.

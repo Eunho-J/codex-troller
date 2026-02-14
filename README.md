@@ -1,6 +1,6 @@
 # codex-troller (Human README)
 
-> If you are an LLM agent, ignore this file and use [README-LLM.md](README-LLM.md).
+> If you are an LLM agent, ignore this file and use the latest remote guide: `https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md`.
 
 Human guides:
 - [English](README.md)
@@ -15,13 +15,13 @@ Use the prompts below.
 Explanation prompt:
 
 ```text
-Read README-LLM.md in https://github.com/Eunho-J/codex-troller and explain what codex-troller does, why it exists, and how the workflow works in the same language I am using in this chat.
+Fetch and read the latest guide from https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md (do not use a local README-LLM.md by default). If internet access is blocked, ask me to approve network access first. Then explain what codex-troller does, why it exists, and how the workflow works in the same language I am using in this chat.
 ```
 
 Installation prompt:
 
 ```text
-Read README-LLM.md in https://github.com/Eunho-J/codex-troller, ask me the required confirmations in the same language I am using in this chat, then install and configure codex-troller end-to-end.
+Fetch and read the latest guide from https://raw.githubusercontent.com/Eunho-J/codex-troller/main/README-LLM.md (do not use a local README-LLM.md by default). If internet access is blocked, ask me to approve network access first. Then ask required confirmations in the same language I am using in this chat and install/configure codex-troller end-to-end using the latest GitHub repository.
 ```
 
 ## What This Project Is

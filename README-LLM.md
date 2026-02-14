@@ -359,7 +359,7 @@ printf '\n[mcp_servers.playwright]\ncommand = "%s"\n' "$BIN_DIR/playwright-mcp-l
 ```
 - Install Playwright browser binaries first:
 ```bash
-PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y playwright@latest install chromium firefox webkit
+PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y playwright@latest install firefox
 ```
 - Optional diagnostics (recommended when the user wants immediate browser-run validation in this environment):
 ```bash
@@ -379,7 +379,7 @@ PATH="$NODE_BIN_DIR:$PATH" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH=
 - If diagnostics report missing Linux shared libraries, ask user to run apt commands directly (do not run `sudo apt*` automatically):
 ```bash
 sudo apt-get update
-sudo env "PATH=$NODE_BIN_DIR:$PATH" "$NPX_BIN" -y playwright@latest install-deps chromium firefox webkit
+sudo env "PATH=$NODE_BIN_DIR:$PATH" "$NPX_BIN" -y playwright@latest install-deps firefox
 ```
 - After user confirms apt step is done, rerun diagnostics.
 - If diagnostics still fail, continue installation with a warning note:

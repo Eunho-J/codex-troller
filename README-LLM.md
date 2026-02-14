@@ -148,26 +148,15 @@ Deprecated for LLM installation flow:
 
 After confirmations are complete, run commands one by one:
 
-1. Clone repository
+1. Prerequisite checks
 ```bash
-git clone https://github.com/Eunho-J/codex-troller.git
-cd codex-troller
-```
-
-2. Prerequisite checks
-```bash
-command -v git
 command -v go
+command -v cp
+command -v awk
+command -v rm
 ```
 
-3. Build binary + run unit tests
-```bash
-mkdir -p .codex-mcp/bin
-go build -o .codex-mcp/bin/codex-mcp ./cmd/codex-mcp
-go test ./...
-```
-
-4. Choose install scope and paths
+2. Choose install scope and paths
 ```bash
 # global scope
 export CODEX_HOME="$HOME/.codex"
@@ -176,17 +165,53 @@ export CODEX_HOME="$HOME/.codex"
 
 export CONFIG_PATH="$CODEX_HOME/config.toml"
 export STATE_DIR="$CODEX_HOME/.codex-troller"
+export BIN_DIR="$STATE_DIR/bin"
+export MCP_BIN_PATH="$BIN_DIR/codex-mcp"
 export PROFILE_PATH="$STATE_DIR/default_user_profile.json"
-export LAUNCHER_PATH="$(pwd)/.codex-mcp/bin/codex-troller-launch"
+export LAUNCHER_PATH="$BIN_DIR/codex-troller-launch"
 ```
 
-5. Prepare directories
+3. Create temp fetch directory
 ```bash
-mkdir -p "$STATE_DIR" "$CODEX_HOME/skills" "$(dirname "$CONFIG_PATH")"
+export FETCH_DIR="$(mktemp -d)"
+```
+
+4. Fetch source (zip preferred, git fallback)
+```bash
+if command -v curl >/dev/null 2>&1 && command -v unzip >/dev/null 2>&1; then
+  curl -fsSL https://github.com/Eunho-J/codex-troller/archive/refs/heads/main.zip -o "$FETCH_DIR/codex-troller.zip"
+  unzip -q "$FETCH_DIR/codex-troller.zip" -d "$FETCH_DIR"
+  export SRC_DIR="$FETCH_DIR/codex-troller-main"
+elif command -v wget >/dev/null 2>&1 && command -v unzip >/dev/null 2>&1; then
+  wget -qO "$FETCH_DIR/codex-troller.zip" https://github.com/Eunho-J/codex-troller/archive/refs/heads/main.zip
+  unzip -q "$FETCH_DIR/codex-troller.zip" -d "$FETCH_DIR"
+  export SRC_DIR="$FETCH_DIR/codex-troller-main"
+else
+  command -v git
+  git clone --depth 1 https://github.com/Eunho-J/codex-troller.git "$FETCH_DIR/codex-troller-main"
+  export SRC_DIR="$FETCH_DIR/codex-troller-main"
+fi
+```
+
+5. Prepare target directories
+```bash
+mkdir -p "$STATE_DIR" "$BIN_DIR" "$CODEX_HOME/skills" "$(dirname "$CONFIG_PATH")"
 touch "$CONFIG_PATH"
 ```
 
-6. Write profile from interview answers
+6. Build binary + run tests from fetched source
+```bash
+(cd "$SRC_DIR" && go build -o "$MCP_BIN_PATH" ./cmd/codex-mcp)
+(cd "$SRC_DIR" && go test ./...)
+```
+
+7. Install skill files from fetched source
+```bash
+rm -rf "$CODEX_HOME/skills/codex-troller-autostart"
+cp -R "$SRC_DIR/skills/codex-troller-autostart" "$CODEX_HOME/skills/codex-troller-autostart"
+```
+
+8. Write profile from interview answers
 ```bash
 # Replace values below with captured interview answers.
 export PROFILE_OVERALL="intermediate"
@@ -204,30 +229,24 @@ cat > "$PROFILE_PATH" <<EOF
 EOF
 ```
 
-7. Write launcher
+9. Write launcher
 ```bash
 cat > "$LAUNCHER_PATH" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 export CODEX_TROLLER_DEFAULT_PROFILE_PATH="$PROFILE_PATH"
-exec "$(pwd)/.codex-mcp/bin/codex-mcp"
+exec "$MCP_BIN_PATH"
 EOF
 chmod +x "$LAUNCHER_PATH"
 ```
 
-8. Install skill files
-```bash
-rm -rf "$CODEX_HOME/skills/codex-troller-autostart"
-cp -R skills/codex-troller-autostart "$CODEX_HOME/skills/codex-troller-autostart"
-```
-
-9. Register MCP server in config (idempotent section replace)
+10. Register MCP server in config (idempotent section replace)
 ```bash
 awk -v sec='[mcp_servers.codex-troller]' 'BEGIN{skip=0} $0==sec{skip=1;next} skip&&$0~/^\[/{skip=0} !skip{print}' "$CONFIG_PATH" > "$CONFIG_PATH.tmp" && mv "$CONFIG_PATH.tmp" "$CONFIG_PATH"
 printf '\n[mcp_servers.codex-troller]\ncommand = "%s"\n' "$LAUNCHER_PATH" >> "$CONFIG_PATH"
 ```
 
-10. If Playwright selected: register MCP + install dependencies command-by-command
+11. If Playwright selected: register MCP + install dependencies command-by-command
 ```bash
 command -v npx
 awk -v sec='[mcp_servers.playwright]' 'BEGIN{skip=0} $0==sec{skip=1;next} skip&&$0~/^\[/{skip=0} !skip{print}' "$CONFIG_PATH" > "$CONFIG_PATH.tmp" && mv "$CONFIG_PATH.tmp" "$CONFIG_PATH"
@@ -250,7 +269,7 @@ npx -y -p playwright node -e "const { chromium } = require('playwright'); (async
   2) skip Playwright.
   Then execute choice and re-verify. Repeat until success or explicit skip.
 
-11. Write consent log
+12. Write consent log
 ```bash
 export PLAYWRIGHT_MCP_VALUE="yes"   # or "no"
 cat > "$STATE_DIR/install-consent.log" <<EOF
@@ -267,23 +286,28 @@ profile_path: $PROFILE_PATH
 EOF
 ```
 
-12. Verify installation (no shell wrapper)
+13. Verify installation (no shell wrapper)
 ```bash
-test -x .codex-mcp/bin/codex-mcp
-test -x .codex-mcp/bin/codex-troller-launch
+test -x "$MCP_BIN_PATH"
+test -x "$LAUNCHER_PATH"
 test -f "$CODEX_HOME/skills/codex-troller-autostart/SKILL.md"
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | .codex-mcp/bin/codex-mcp
-echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | .codex-mcp/bin/codex-mcp
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | "$MCP_BIN_PATH"
+echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | "$MCP_BIN_PATH"
+```
+
+14. Clean fetched files/folders
+```bash
+rm -rf "$FETCH_DIR"
 ```
 
 ## Verification Checklist
 
-- `.codex-mcp/bin/codex-mcp` exists
-- `.codex-mcp/bin/codex-troller-launch` exists
+- `<CODEX_HOME>/.codex-troller/bin/codex-mcp` exists
+- `<CODEX_HOME>/.codex-troller/bin/codex-troller-launch` exists
 - Codex config has `[mcp_servers.codex-troller]`
 - If requested, config also has `[mcp_servers.playwright]`
 - Skill exists at `<CODEX_HOME>/skills/codex-troller-autostart/SKILL.md`
-- `initialize` and `tools/list` JSON-RPC calls succeed via `.codex-mcp/bin/codex-mcp`
+- `initialize` and `tools/list` JSON-RPC calls succeed via `<CODEX_HOME>/.codex-troller/bin/codex-mcp`
 
 ## Failure Handling
 

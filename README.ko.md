@@ -27,6 +27,12 @@ Requirements:
 - Treat this repository as an MCP server project, not a skill package.
 - Do not use `skill-installer`.
 - Read and follow this repository `README.md` install/setup steps.
+- 어떤 설치 명령이든 실행하기 전에, 아래 항목을 사용자에게 질문하고 명시적 답변을 받은 뒤 진행한다:
+  1) 약관 동의 (`충분히 검증되지 않음`, `문제 발생 시 사용자 책임`, `GNU GPL v3.0 인지`);
+  2) 설치 범위 (`global` 또는 `local`);
+  3) Playwright MCP 설치 여부 (`yes`/`no`);
+  4) 초기 전문성 프로필 (`overall`, `response_need`, `technical_depth`, `domain_knowledge`).
+- 약관에 동의하지 않으면 설치를 중단한다.
 - Run interactive `make agent-install` (terms consent, install scope, optional Playwright MCP registration, expertise survey).
 - Run `make setup` and verify with `make smoke`.
 - If a step fails, resolve it and continue until installation and smoke verification both pass.

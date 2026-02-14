@@ -388,10 +388,22 @@ func toolListResponse() map[string]any {
 							"type":  "array",
 							"items": map[string]any{"type": "string"},
 						},
+						"executor_role": map[string]any{
+							"type":        "string",
+							"description": "Execution agent role. Must be a worker role (e.g., backend_worker, frontend_worker, implementation_worker).",
+						},
+						"executor_model": map[string]any{
+							"type":        "string",
+							"description": "Model used by execution agent. Must match routing_policy.worker_model.",
+						},
+						"delegated_by": map[string]any{
+							"type":        "string",
+							"description": "Manager/consultant role that delegated this implementation task.",
+						},
 						"dry_run":     map[string]any{"type": "boolean"},
 						"timeout_sec": map[string]any{"type": "number", "default": 30},
 					},
-					"required": []string{"session_id", "commands"},
+					"required": []string{"session_id", "commands", "executor_role", "executor_model"},
 				},
 			),
 			newTool(
@@ -763,6 +775,38 @@ func normalizeCouncilRoleID(raw string) string {
 	}
 	normalized := strings.Trim(b.String(), "_")
 	return normalized
+}
+
+func normalizeExecutionRole(raw string) string {
+	return normalizeCouncilRoleID(raw)
+}
+
+func isWorkerExecutionRole(role string) bool {
+	r := normalizeExecutionRole(role)
+	if r == "" {
+		return false
+	}
+	switch r {
+	case "worker", "implementation_worker", "execution_worker", "module_worker", "function_worker":
+		return true
+	}
+	return strings.HasSuffix(r, "_worker")
+}
+
+func isManagerOrConsultantRole(session *SessionState, role string) bool {
+	r := normalizeExecutionRole(role)
+	if r == "" {
+		return false
+	}
+	if strings.Contains(r, "manager") || strings.Contains(r, "director") || strings.Contains(r, "lead") || strings.Contains(r, "consultant") || r == "moderator" {
+		return true
+	}
+	for _, mgr := range session.CouncilManagers {
+		if normalizeCouncilRoleID(mgr.Role) == r {
+			return true
+		}
+	}
+	return false
 }
 
 func inferCouncilDomain(role string) string {
@@ -2718,20 +2762,48 @@ func (s *MCPServer) toolValidateTransition(raw json.RawMessage) (any, error) {
 
 func (s *MCPServer) toolRunAction(raw json.RawMessage) (any, error) {
 	var args struct {
-		SessionID string   `json:"session_id"`
-		Commands  []string `json:"commands"`
-		DryRun    bool     `json:"dry_run"`
-		Timeout   int      `json:"timeout_sec"`
+		SessionID     string   `json:"session_id"`
+		Commands      []string `json:"commands"`
+		ExecutorRole  string   `json:"executor_role"`
+		ExecutorModel string   `json:"executor_model"`
+		DelegatedBy   string   `json:"delegated_by"`
+		DryRun        bool     `json:"dry_run"`
+		Timeout       int      `json:"timeout_sec"`
 	}
 	if err := json.Unmarshal(raw, &args); err != nil {
 		return nil, err
 	}
 	session := s.getOrCreateSession(args.SessionID)
 	if session.Step != StepPlanApproved {
-		return nil, fmt.Errorf("run_action requires plan_approved state")
+		return map[string]any{
+			"session_id":    session.SessionID,
+			"status":        "blocked",
+			"reason":        "run_action requires plan_approved state",
+			"step":          session.Step,
+			"expected_step": StepPlanApproved,
+			"next_step":     nextAction(session),
+		}, nil
 	}
 	if len(args.Commands) == 0 {
 		return nil, fmt.Errorf("commands is required")
+	}
+	executorRole := normalizeExecutionRole(args.ExecutorRole)
+	if executorRole == "" {
+		return nil, fmt.Errorf("executor_role is required and must be a worker role")
+	}
+	if isManagerOrConsultantRole(session, executorRole) {
+		return nil, fmt.Errorf("executor_role %q is not allowed for implementation; delegate to a worker role", executorRole)
+	}
+	if !isWorkerExecutionRole(executorRole) {
+		return nil, fmt.Errorf("executor_role %q is not a worker role; use roles like backend_worker/frontend_worker", executorRole)
+	}
+	executorModel := strings.TrimSpace(args.ExecutorModel)
+	if executorModel == "" {
+		return nil, fmt.Errorf("executor_model is required and must match routing_policy.worker_model")
+	}
+	expectedWorkerModel := strings.TrimSpace(session.RoutingPolicy.WorkerModel)
+	if expectedWorkerModel != "" && executorModel != expectedWorkerModel {
+		return nil, fmt.Errorf("executor_model %q does not match routing_policy.worker_model %q", executorModel, expectedWorkerModel)
 	}
 
 	timeout := time.Duration(args.Timeout)

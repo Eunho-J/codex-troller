@@ -476,7 +476,7 @@ func TestRunActionDryRun(t *testing.T) {
 	sess := srv.getOrCreateSession(sid)
 	sess.Step = StepPlanApproved
 
-	out, err := srv.toolRunAction([]byte(`{"session_id":"test-session","commands":["echo ok"],"dry_run":true,"timeout_sec":1}`))
+	out, err := srv.toolRunAction([]byte(`{"session_id":"test-session","commands":["echo ok"],"executor_role":"implementation_worker","executor_model":"gpt-5.3-codex-spark","delegated_by":"backend_lead","dry_run":true,"timeout_sec":1}`))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -488,6 +488,55 @@ func TestRunActionDryRun(t *testing.T) {
 	}
 	if step != StepActionExecuted {
 		t.Fatalf("unexpected step after dry run: %s", step)
+	}
+}
+
+func TestRunActionBlockedOnStepMismatchReturnsNextStep(t *testing.T) {
+	srv := NewMCPServer(Config{StatePath: filepath.Join(t.TempDir(), "state.json")})
+	sid := "run-action-mismatch"
+	sess := srv.getOrCreateSession(sid)
+	sess.Step = StepActionExecuted
+
+	out, err := srv.toolRunAction([]byte(`{"session_id":"run-action-mismatch","commands":["echo ok"],"executor_role":"implementation_worker","executor_model":"gpt-5.3-codex-spark","delegated_by":"backend_lead","dry_run":true}`))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	result := out.(map[string]any)
+	if result["status"] != "blocked" {
+		t.Fatalf("expected blocked status, got %#v", result)
+	}
+	if result["next_step"] != "verify_result" {
+		t.Fatalf("expected next_step verify_result, got %v", result["next_step"])
+	}
+}
+
+func TestRunActionRejectsManagerExecutorRole(t *testing.T) {
+	srv := NewMCPServer(Config{StatePath: filepath.Join(t.TempDir(), "state.json")})
+	sid := "run-action-role-check"
+	sess := srv.getOrCreateSession(sid)
+	sess.Step = StepPlanApproved
+
+	_, err := srv.toolRunAction([]byte(`{"session_id":"run-action-role-check","commands":["echo ok"],"executor_role":"backend_lead","executor_model":"gpt-5.3-codex-spark","delegated_by":"consultant","dry_run":true}`))
+	if err == nil {
+		t.Fatal("expected error for manager executor role")
+	}
+	if !strings.Contains(err.Error(), "not allowed") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRunActionRejectsExecutorModelMismatch(t *testing.T) {
+	srv := NewMCPServer(Config{StatePath: filepath.Join(t.TempDir(), "state.json")})
+	sid := "run-action-model-check"
+	sess := srv.getOrCreateSession(sid)
+	sess.Step = StepPlanApproved
+
+	_, err := srv.toolRunAction([]byte(`{"session_id":"run-action-model-check","commands":["echo ok"],"executor_role":"implementation_worker","executor_model":"gpt-5.3-codex","delegated_by":"backend_lead","dry_run":true}`))
+	if err == nil {
+		t.Fatal("expected error for worker model mismatch")
+	}
+	if !strings.Contains(err.Error(), "does not match routing_policy.worker_model") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
@@ -851,7 +900,7 @@ func TestWorkflowHappyPath(t *testing.T) {
 		t.Fatalf("unexpected approve result: %#v", approve)
 	}
 
-	runActionOut, err := srv.toolRunAction([]byte(`{"session_id":"workflow-1","commands":["echo action"],"dry_run":true,"timeout_sec":1}`))
+	runActionOut, err := srv.toolRunAction([]byte(`{"session_id":"workflow-1","commands":["echo action"],"executor_role":"implementation_worker","executor_model":"gpt-5.3-codex-spark","delegated_by":"backend_lead","dry_run":true,"timeout_sec":1}`))
 	if err != nil {
 		t.Fatalf("run_action failed: %v", err)
 	}
@@ -1092,7 +1141,7 @@ func TestJSONRPCWorkflowProcess(t *testing.T) {
 	callTool(13, "generate_plan", `{"session_id":"rpc-1"}`)
 	callTool(14, "generate_mockup", `{"session_id":"rpc-1"}`)
 	callTool(15, "approve_plan", `{"session_id":"rpc-1","approved":true,"requirement_tags":["server"],"success_criteria":["테스트 통과"]}`)
-	callTool(16, "run_action", `{"session_id":"rpc-1","commands":["echo run"],"dry_run":true}`)
+	callTool(16, "run_action", `{"session_id":"rpc-1","commands":["echo run"],"executor_role":"implementation_worker","executor_model":"gpt-5.3-codex-spark","delegated_by":"backend_lead","dry_run":true}`)
 	callTool(17, "verify_result", `{"session_id":"rpc-1","commands":["echo ok"]}`)
 	callTool(18, "record_user_feedback", `{"session_id":"rpc-1","approved":true,"feedback":"approved"}`)
 	summary := callTool(19, "summarize", `{"session_id":"rpc-1"}`)

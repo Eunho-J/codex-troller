@@ -143,7 +143,7 @@ tool_call "clarify_intent" "$(jq -cn --arg sid "$SESSION_ID" '{session_id:$sid,a
 tool_call "generate_plan" "$(jq -cn --arg sid "$SESSION_ID" '{session_id:$sid}')"
 tool_call "generate_mockup" "$(jq -cn --arg sid "$SESSION_ID" '{session_id:$sid}')"
 tool_call "approve_plan" "$(jq -cn --arg sid "$SESSION_ID" --argjson tags "$TAGS_JSON" --arg criteria "$SMOKE_CRITERIA" '{session_id:$sid,approved:true,requirement_tags:$tags,success_criteria:[$criteria]}')"
-tool_call "run_action" "$(jq -cn --arg sid "$SESSION_ID" '{session_id:$sid,commands:["echo smoke"],dry_run:true}')"
+tool_call "run_action" "$(jq -cn --arg sid "$SESSION_ID" '{session_id:$sid,commands:["echo smoke"],executor_role:"implementation_worker",executor_model:"gpt-5.3-codex-spark",delegated_by:"backend_lead",dry_run:true}')"
 tool_call "verify_result" "$(jq -cn --arg sid "$SESSION_ID" --argjson mcps "$AVAILABLE_MCPS_JSON" --argjson tools "$AVAILABLE_MCP_TOOLS_JSON" '{session_id:$sid,commands:["echo ok"],available_mcps:$mcps,available_mcp_tools:$tools}')"
 VERIFY_NEXT="$(echo "$LAST_STRUCTURED" | jq -r '.next_step // ""')"
 if [[ "$VERIFY_NEXT" == "visual_review" ]]; then

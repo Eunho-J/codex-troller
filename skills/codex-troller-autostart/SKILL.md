@@ -25,6 +25,8 @@ Purpose: start a full task lifecycle with interview-first behavior by calling th
    - `constraints: ...`
    - `success_criteria: ...`
 4. Call workflow tools in order:
+   - Before each tool call after `start_interview`, call `get_session_status` and check `next`.
+   - If your intended tool does not match `next`, do not force the call. Follow `next` first.
    - `ingest_intent`
    - Optional: `council_configure_team` when project needs role composition changes
    - `council_start_briefing`
@@ -47,6 +49,10 @@ Purpose: start a full task lifecycle with interview-first behavior by calling th
    - discuss mockup with user
    - `approve_plan`
    - `run_action`
+     - Must include worker execution metadata:
+       - `executor_role`: worker-only role (e.g., `backend_worker`, `frontend_worker`, `implementation_worker`)
+       - `executor_model`: must match `routing_policy.worker_model`
+       - `delegated_by`: manager/consultant role that delegated the task
    - `verify_result`
    - if `verify_result.next_step` is `visual_review`, run `visual_review`:
      - provide render artifacts/findings
@@ -54,8 +60,11 @@ Purpose: start a full task lifecycle with interview-first behavior by calling th
    - `record_user_feedback`
    - `summarize`
 5. Never run `run_action` before plan approval.
-6. If approval/risk/permission ambiguity appears, pause execution and continue interview.
-7. Keep looping until explicit user approval:
+6. Consultant or manager roles must never implement directly.
+   - Consultant/team leads produce intent/plan/review decisions only.
+   - Actual code/command execution must be delegated to worker agents.
+7. If approval/risk/permission ambiguity appears, pause execution and continue interview.
+8. Keep looping until explicit user approval:
    - verification fail or `approved=false` -> continue from `generate_plan`
    - only treat done when `record_user_feedback(approved=true)` and step is `summarized`
 
@@ -72,6 +81,8 @@ Purpose: start a full task lifecycle with interview-first behavior by calling th
 - Never force menu-style choices (`A/B/C`, `accept/refine/alternative`) as the default UX; start with a concrete draft and one focused follow-up question.
 - Preserve traceability: keep requirement tags and success criteria explicit.
 - Use `get_session_status` to report progress when needed.
+- Use `get_session_status` as a hard preflight gate before each workflow tool call.
+- Treat `status.next` as authoritative for sequencing; never assume stage from memory.
 - Use `council_get_status` to keep discussion state synchronized.
 - If session is `failed` and retry budget remains, call `continue_persistent_execution` and resume the loop.
 - On resume, call `reconcile_session_state(mode=\"check\")` first. If drift is high, ask user to choose `keep_context` or `restart_context`.

@@ -56,6 +56,14 @@ Before running any install command, ask the user and wait for explicit answers.
   - when it is useful.
 - Then present numbered options and ask for a number.
 
+## Command Execution Policy (mandatory)
+
+- Do not ask the user to manually execute installation commands.
+- Execute installation commands yourself, one by one.
+- For commands that may require elevated privileges, request execution approval first.
+- After approval, run the command and report result briefly.
+- If approval is denied, ask whether to skip or retry with a different method.
+
 Recommended expertise-question style (ask in user's language):
 
 1. `overall` mapping
@@ -107,9 +115,8 @@ Use the following confirmation content in the user's language (semantic equivale
    - Before asking, briefly explain in the user's language:
      - It enables browser automation and UI verification.
      - It is useful for web projects, E2E checks, and visual flow testing.
-     - If selected, installer will also install Playwright browser/runtime dependencies.
+     - If selected, agent will run Playwright dependency installation commands step by step.
      - On Linux, OS-level dependency installation may require elevated privileges.
-     - If OS dependency install fails on Linux, installer automatically retries browser-only install.
    - Ask with numbered options:
      - `1)` install/register Playwright MCP
      - `2)` skip Playwright MCP
@@ -153,6 +160,25 @@ make setup
 make smoke
 ```
 
+4. If Playwright was selected, run dependency setup command-by-command
+   - Linux (ask approval first for elevated execution):
+```bash
+npx -y playwright@latest install --with-deps chromium firefox webkit
+```
+   - If Linux deps install fails or approval is denied, run browser-only install:
+```bash
+npx -y playwright@latest install chromium firefox webkit
+```
+   - Verify Playwright runtime:
+```bash
+npx -y -p playwright node -e "const { chromium } = require('playwright'); (async()=>{ const b=await chromium.launch({headless:true}); await b.close(); })();"
+```
+   - If verification fails:
+     1) ask user whether to retry dependency install or skip Playwright,
+     2) execute chosen action,
+     3) verify again,
+     4) repeat until success or explicit skip decision.
+
 ## Non-Interactive Alternative
 
 Use only when the user explicitly asks for non-interactive mode and all answers are already confirmed.
@@ -184,6 +210,7 @@ If any step fails:
 - explain the failure in plain language,
 - fix and retry automatically,
 - ask user only when a permission/risk decision is required.
+- do not redirect installation work to the user unless they explicitly choose manual mode.
 
 ## Completion Message Policy (mandatory)
 

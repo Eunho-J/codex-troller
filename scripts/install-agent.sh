@@ -200,29 +200,9 @@ fi
 
 make -C "$ROOT_DIR" setup >/dev/null
 
-if [[ "$PLAYWRIGHT_CONSENT" == "yes" ]]; then
-  if ! command -v npx >/dev/null 2>&1; then
-    echo "[agent-install] failed: Playwright MCP requires Node.js+npx, but npx is not available." >&2
-    exit 1
-  fi
-
-  echo "[agent-install] installing Playwright runtime dependencies..."
-  if [[ "$(uname -s)" == "Linux" ]]; then
-    # Linux needs browser binaries + OS dependencies.
-    if ! npx -y playwright@latest install --with-deps chromium firefox webkit; then
-      echo "[agent-install] warning: failed to install Linux OS dependencies (sudo may be required)." >&2
-      echo "[agent-install] retrying browser-only Playwright install..." >&2
-      if ! npx -y playwright@latest install chromium firefox webkit; then
-        echo "[agent-install] failed: could not install Playwright browser binaries." >&2
-        exit 1
-      fi
-    fi
-  else
-    if ! npx -y playwright@latest install chromium firefox webkit; then
-      echo "[agent-install] failed: could not install Playwright browser binaries." >&2
-      exit 1
-    fi
-  fi
+if [[ "$PLAYWRIGHT_CONSENT" == "yes" ]] && ! command -v npx >/dev/null 2>&1; then
+  echo "[agent-install] failed: Playwright MCP requires Node.js+npx, but npx is not available." >&2
+  exit 1
 fi
 
 # Migrate legacy non-hidden state directory if it exists.

@@ -66,6 +66,14 @@ Before running any install command, ask the user and wait for explicit answers.
 - Install toolchain/runtime dependencies inside `<CODEX_HOME>/.codex-troller/deps` by default (Go, Node, Playwright assets).
 - Do not require persistent global environment variable setup for installation.
 
+## Go Installation Policy (mandatory)
+
+- If Go is missing, install Go locally from official tarball source (`https://go.dev/dl/`) into `<CODEX_HOME>/.codex-troller/deps/go`.
+- Never install Go via system package managers in default flow (`apt`, `apt-get`, `yum`, `dnf`, `brew`, `choco`, `snap`, etc.).
+- Never ask the user to choose between "root install Go" and "stop".
+- Default behavior is: local Go install -> continue build/test/install.
+- Ask only for normal command approval when needed, not for root package-manager installation for Go.
+
 Recommended expertise-question style (ask in user's language):
 
 1. `overall` mapping
@@ -204,6 +212,8 @@ touch "$CONFIG_PATH"
 GO_VERSION="$(awk '/^go /{print $2; exit}' "$SRC_DIR/go.mod")"
 GO_ROOT="$DEPS_DIR/go"
 GO_BIN="$GO_ROOT/bin/go"
+
+# Do NOT use apt/brew/choco for Go in this flow.
 
 if [ ! -x "$GO_BIN" ]; then
   OS="$(uname -s | tr '[:upper:]' '[:lower:]')"

@@ -210,8 +210,12 @@ if [[ "$PLAYWRIGHT_CONSENT" == "yes" ]]; then
   if [[ "$(uname -s)" == "Linux" ]]; then
     # Linux needs browser binaries + OS dependencies.
     if ! npx -y playwright@latest install --with-deps chromium firefox webkit; then
-      echo "[agent-install] failed: could not install Playwright browsers/OS dependencies on Linux." >&2
-      exit 1
+      echo "[agent-install] warning: failed to install Linux OS dependencies (sudo may be required)." >&2
+      echo "[agent-install] retrying browser-only Playwright install..." >&2
+      if ! npx -y playwright@latest install chromium firefox webkit; then
+        echo "[agent-install] failed: could not install Playwright browser binaries." >&2
+        exit 1
+      fi
     fi
   else
     if ! npx -y playwright@latest install chromium firefox webkit; then

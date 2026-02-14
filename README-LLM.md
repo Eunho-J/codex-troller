@@ -109,6 +109,7 @@ Use the following confirmation content in the user's language (semantic equivale
      - It is useful for web projects, E2E checks, and visual flow testing.
      - If selected, installer will also install Playwright browser/runtime dependencies.
      - On Linux, OS-level dependency installation may require elevated privileges.
+     - If OS dependency install fails on Linux, installer automatically retries browser-only install.
    - Ask with numbered options:
      - `1)` install/register Playwright MCP
      - `2)` skip Playwright MCP

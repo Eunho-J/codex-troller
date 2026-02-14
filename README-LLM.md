@@ -139,9 +139,14 @@ Recommended turn-by-turn order:
 3. Ask Playwright MCP consent only, wait for answer.
 4. Ask expertise profile fields one by one, validating each answer.
 
-## Installation Procedure
+## Installation Procedure (command-by-command, no make/script flow)
 
-After confirmations are complete:
+Deprecated for LLM installation flow:
+- `make agent-install`
+- `make setup`
+- shell installer wrappers in `scripts/`
+
+After confirmations are complete, run commands one by one:
 
 1. Clone repository
 ```bash
@@ -149,50 +154,126 @@ git clone https://github.com/Eunho-J/codex-troller.git
 cd codex-troller
 ```
 
-2. Run installer (interactive, recommended)
+2. Prerequisite checks
 ```bash
-make agent-install
+command -v git
+command -v go
 ```
 
-3. Run setup/verification
+3. Build binary + run unit tests
 ```bash
-make setup
-make smoke
+mkdir -p .codex-mcp/bin
+go build -o .codex-mcp/bin/codex-mcp ./cmd/codex-mcp
+go test ./...
 ```
 
-4. If Playwright was selected, run dependency setup command-by-command
-   - Linux (ask approval first for elevated execution):
+4. Choose install scope and paths
+```bash
+# global scope
+export CODEX_HOME="$HOME/.codex"
+# local scope
+# export CODEX_HOME="$(pwd)/.codex"
+
+export CONFIG_PATH="$CODEX_HOME/config.toml"
+export STATE_DIR="$CODEX_HOME/.codex-troller"
+export PROFILE_PATH="$STATE_DIR/default_user_profile.json"
+export LAUNCHER_PATH="$(pwd)/.codex-mcp/bin/codex-troller-launch"
+```
+
+5. Prepare directories
+```bash
+mkdir -p "$STATE_DIR" "$CODEX_HOME/skills" "$(dirname "$CONFIG_PATH")"
+touch "$CONFIG_PATH"
+```
+
+6. Write profile from interview answers
+```bash
+# Replace values below with captured interview answers.
+export PROFILE_OVERALL="intermediate"
+export PROFILE_RESPONSE_NEED="balanced"
+export PROFILE_TECHNICAL_DEPTH="balanced"
+export DOMAIN_KNOWLEDGE_JSON='{}'
+
+cat > "$PROFILE_PATH" <<EOF
+{
+  "overall": "$PROFILE_OVERALL",
+  "response_need": "$PROFILE_RESPONSE_NEED",
+  "technical_depth": "$PROFILE_TECHNICAL_DEPTH",
+  "domain_knowledge": $DOMAIN_KNOWLEDGE_JSON
+}
+EOF
+```
+
+7. Write launcher
+```bash
+cat > "$LAUNCHER_PATH" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export CODEX_TROLLER_DEFAULT_PROFILE_PATH="$PROFILE_PATH"
+exec "$(pwd)/.codex-mcp/bin/codex-mcp"
+EOF
+chmod +x "$LAUNCHER_PATH"
+```
+
+8. Install skill files
+```bash
+rm -rf "$CODEX_HOME/skills/codex-troller-autostart"
+cp -R skills/codex-troller-autostart "$CODEX_HOME/skills/codex-troller-autostart"
+```
+
+9. Register MCP server in config (idempotent section replace)
+```bash
+awk -v sec='[mcp_servers.codex-troller]' 'BEGIN{skip=0} $0==sec{skip=1;next} skip&&$0~/^\[/{skip=0} !skip{print}' "$CONFIG_PATH" > "$CONFIG_PATH.tmp" && mv "$CONFIG_PATH.tmp" "$CONFIG_PATH"
+printf '\n[mcp_servers.codex-troller]\ncommand = "%s"\n' "$LAUNCHER_PATH" >> "$CONFIG_PATH"
+```
+
+10. If Playwright selected: register MCP + install dependencies command-by-command
+```bash
+command -v npx
+awk -v sec='[mcp_servers.playwright]' 'BEGIN{skip=0} $0==sec{skip=1;next} skip&&$0~/^\[/{skip=0} !skip{print}' "$CONFIG_PATH" > "$CONFIG_PATH.tmp" && mv "$CONFIG_PATH.tmp" "$CONFIG_PATH"
+printf '\n[mcp_servers.playwright]\ncommand = "npx"\nargs = ["-y", "@playwright/mcp@latest"]\n' >> "$CONFIG_PATH"
+```
+- Linux: request permission, then run:
 ```bash
 npx -y playwright@latest install --with-deps chromium firefox webkit
 ```
-   - If Linux deps install fails or approval is denied, run browser-only install:
+- If denied or failed, run:
 ```bash
 npx -y playwright@latest install chromium firefox webkit
 ```
-   - Verify Playwright runtime:
+- Verify runtime:
 ```bash
 npx -y -p playwright node -e "const { chromium } = require('playwright'); (async()=>{ const b=await chromium.launch({headless:true}); await b.close(); })();"
 ```
-   - If verification fails:
-     1) ask user whether to retry dependency install or skip Playwright,
-     2) execute chosen action,
-     3) verify again,
-     4) repeat until success or explicit skip decision.
+- If verify fails, ask user:
+  1) retry dependency install, or
+  2) skip Playwright.
+  Then execute choice and re-verify. Repeat until success or explicit skip.
 
-## Non-Interactive Alternative
-
-Use only when the user explicitly asks for non-interactive mode and all answers are already confirmed.
-
+11. Write consent log
 ```bash
-AGENT_INSTALL_NON_INTERACTIVE=1 \
-INSTALL_TERMS_AGREED=yes \
-INSTALL_SCOPE=global \
-INSTALL_PLAYWRIGHT_MCP=no \
-INSTALL_PROFILE_OVERALL=intermediate \
-INSTALL_PROFILE_RESPONSE_NEED=balanced \
-INSTALL_PROFILE_TECHNICAL_DEPTH=balanced \
-INSTALL_PROFILE_DOMAIN_HINTS="backend,security" \
-make agent-install
+export PLAYWRIGHT_MCP_VALUE="yes"   # or "no"
+cat > "$STATE_DIR/install-consent.log" <<EOF
+timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+terms_version: 2026-02-14
+terms_assertions:
+  - unverified_software=true
+  - user_assumes_responsibility=true
+  - license_gnu_gpl_v3_ack=true
+scope: $( [ "$CODEX_HOME" = "$HOME/.codex" ] && echo global || echo local )
+terms_accepted: yes
+playwright_mcp: $PLAYWRIGHT_MCP_VALUE
+profile_path: $PROFILE_PATH
+EOF
+```
+
+12. Verify installation (no shell wrapper)
+```bash
+test -x .codex-mcp/bin/codex-mcp
+test -x .codex-mcp/bin/codex-troller-launch
+test -f "$CODEX_HOME/skills/codex-troller-autostart/SKILL.md"
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | .codex-mcp/bin/codex-mcp
+echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | .codex-mcp/bin/codex-mcp
 ```
 
 ## Verification Checklist
@@ -202,7 +283,7 @@ make agent-install
 - Codex config has `[mcp_servers.codex-troller]`
 - If requested, config also has `[mcp_servers.playwright]`
 - Skill exists at `<CODEX_HOME>/skills/codex-troller-autostart/SKILL.md`
-- `make smoke` passes
+- `initialize` and `tools/list` JSON-RPC calls succeed via `.codex-mcp/bin/codex-mcp`
 
 ## Failure Handling
 
@@ -228,7 +309,7 @@ If any step fails:
   - "If you want, I can show detailed paths/logs."
 
 Recommended completion template:
-1. Status: install + setup + smoke result (plain language).
+1. Status: install + verification result (plain language).
 2. Immediate next action (one sentence).
 3. Optional: brief "what was configured" summary without deep internals.
 4. Optional offer for detailed technical report on request.

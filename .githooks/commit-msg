@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MSG_FILE="${1:-}"
+if [[ -z "$MSG_FILE" || ! -f "$MSG_FILE" ]]; then
+  echo "[commit-msg] missing commit message file" >&2
+  exit 1
+fi
+
+if [[ "${SKIP_GOAL_ID_CHECK:-0}" == "1" ]]; then
+  exit 0
+fi
+
+FIRST_LINE="$(head -n 1 "$MSG_FILE")"
+if [[ "$FIRST_LINE" =~ ^Merge[[:space:]] ]] || [[ "$FIRST_LINE" =~ ^Revert[[:space:]] ]]; then
+  exit 0
+fi
+
+if ! grep -Eq 'goal_id:[[:space:]]*[A-Za-z0-9._/-]+' "$MSG_FILE"; then
+  cat >&2 <<'EOF'
+[commit-msg] missing required metadata: goal_id
+append a trailer line to commit body:
+goal_id: <your-goal-id>
+EOF
+  exit 1
+fi

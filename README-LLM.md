@@ -75,6 +75,7 @@ Before running any install command, ask the user and wait for explicit answers.
 - After approval, run the command and report result briefly.
 - If approval is denied, ask whether to skip or retry with a different method.
 - For remote fetch commands (`curl`, `wget`, `git clone` to internet), always request approval before first execution.
+- Do not request approval for local non-privileged commands (for example local build/test/verify commands that only read/write inside workspace or `<CODEX_HOME>`).
 - Exception for Linux OS package dependencies (apt):
   - Do not run `sudo apt*` automatically.
   - Ask the user to run required apt commands directly.
@@ -262,6 +263,8 @@ fi
 NODE_VERSION="${NODE_VERSION:-22.13.1}"
 NODE_ROOT="$DEPS_DIR/node"
 NODE_BIN_DIR="$NODE_ROOT/bin"
+NODE_BIN="$NODE_BIN_DIR/node"
+NPM_BIN="$NODE_BIN_DIR/npm"
 NPX_BIN="$NODE_BIN_DIR/npx"
 
 if [ ! -x "$NPX_BIN" ]; then
@@ -291,7 +294,9 @@ if [ ! -x "$NPX_BIN" ]; then
   tar -C "$NODE_ROOT" --strip-components=1 -xzf "$FETCH_DIR/node.tar.gz"
 fi
 
-"$NPX_BIN" --version
+PATH="$NODE_BIN_DIR:$PATH" "$NODE_BIN" --version
+PATH="$NODE_BIN_DIR:$PATH" "$NPM_BIN" --version
+PATH="$NODE_BIN_DIR:$PATH" "$NPX_BIN" --version
 ```
 
 8. Build binary + run tests from fetched source (using local Go)
@@ -346,16 +351,27 @@ printf '\n[mcp_servers.playwright]\ncommand = "%s"\n' "$BIN_DIR/playwright-mcp-l
 ```
 - Install Playwright browser binaries first:
 ```bash
-npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y playwright@latest install chromium firefox webkit
+PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y playwright@latest install chromium firefox webkit
 ```
 - Verify runtime:
 ```bash
-npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y -p playwright node -e "const { chromium } = require('playwright'); (async()=>{ const b=await chromium.launch({headless:true, args:['--no-sandbox','--disable-setuid-sandbox']}); await b.close(); })();"
+PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y -p playwright node -e "const { chromium } = require('playwright'); (async()=>{ const b=await chromium.launch({headless:true, args:['--no-sandbox','--disable-setuid-sandbox']}); await b.close(); })();"
+```
+- If that fails due module-resolution issues in this environment, use deterministic local verify fallback:
+```bash
+PLAYWRIGHT_VERIFY_DIR="$STATE_DIR/playwright-verify"
+mkdir -p "$PLAYWRIGHT_VERIFY_DIR"
+cd "$PLAYWRIGHT_VERIFY_DIR"
+if [ ! -f package.json ]; then
+  PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" "$NPM_BIN" init -y
+fi
+PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPM_BIN" install --no-audit --no-fund --save-dev playwright@latest
+PATH="$NODE_BIN_DIR:$PATH" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NODE_BIN" -e "const { chromium } = require('playwright'); (async()=>{ const b=await chromium.launch({headless:true, args:['--no-sandbox','--disable-setuid-sandbox']}); await b.close(); })();"
 ```
 - If verification reports missing Linux shared libraries, ask user to run apt commands directly (do not run `sudo apt*` automatically):
 ```bash
 sudo apt-get update
-sudo "$NPX_BIN" -y playwright@latest install-deps chromium firefox webkit
+sudo env "PATH=$NODE_BIN_DIR:$PATH" "$NPX_BIN" -y playwright@latest install-deps chromium firefox webkit
 ```
 - After user confirms apt step is done, rerun runtime verification.
 - If verification still fails, ask user:
@@ -383,6 +399,8 @@ EOF
 14. Verify installation (no shell wrapper)
 ```bash
 test -x "$GO_BIN"
+test -x "$NODE_BIN"
+test -x "$NPM_BIN"
 test -x "$NPX_BIN"
 test -x "$MCP_BIN_PATH"
 test -f "$CODEX_HOME/skills/codex-troller-autostart/SKILL.md"

@@ -8,12 +8,20 @@
 - [日本語](README.ja.md)
 - [中文](README.zh.md)
 
-你也可以让 LLM agent 先解释项目，再代你完成安装。
+建议将项目说明和安装都交给 LLM agent 执行。
 
-可复制粘贴的一行提示词:
+请使用下面的提示词。
+
+说明提示词:
 
 ```text
-Read README-LLM.md in https://github.com/Eunho-J/codex-troller, ask me the required confirmations first, then install and configure codex-troller end-to-end.
+请阅读 https://github.com/Eunho-J/codex-troller 的 README-LLM.md，并用通俗语言说明 codex-troller 是做什么的、为什么需要它、以及工作流如何运行。
+```
+
+安装提示词:
+
+```text
+请阅读 https://github.com/Eunho-J/codex-troller 的 README-LLM.md，先向我确认必需的确认项，然后把 codex-troller 的安装与配置完整执行到结束。
 ```
 
 ## 项目概览

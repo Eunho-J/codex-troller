@@ -8,12 +8,20 @@
 - [日本語](README.ja.md)
 - [中文](README.zh.md)
 
-원하면 LLM 에이전트에게 이 프로젝트 설명과 설치를 맡길 수 있습니다.
+프로젝트 설명과 설치는 LLM 에이전트에게 맡기는 것을 권장합니다.
 
-복사/붙여넣기 1줄 프롬프트:
+아래 프롬프트를 사용하세요.
+
+설명 프롬프트:
 
 ```text
-Read README-LLM.md in https://github.com/Eunho-J/codex-troller, ask me the required confirmations first, then install and configure codex-troller end-to-end.
+https://github.com/Eunho-J/codex-troller 의 README-LLM.md를 읽고, codex-troller가 무엇을 하는지, 왜 필요한지, 워크플로우가 어떻게 동작하는지 쉽게 설명해줘.
+```
+
+설치 프롬프트:
+
+```text
+https://github.com/Eunho-J/codex-troller 의 README-LLM.md를 읽고, 먼저 필수 확인 항목을 나에게 질문한 뒤 codex-troller를 설치와 설정까지 끝까지 진행해줘.
 ```
 
 ## 프로젝트 개요

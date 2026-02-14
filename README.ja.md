@@ -8,12 +8,20 @@
 - [日本語](README.ja.md)
 - [中文](README.zh.md)
 
-必要なら、LLM エージェントにプロジェクト説明とインストールを任せてください。
+プロジェクト説明とインストールは、LLM エージェントに任せることを推奨します。
 
-コピー&ペースト用 1 行プロンプト:
+以下のプロンプトを使ってください。
+
+説明プロンプト:
 
 ```text
-Read README-LLM.md in https://github.com/Eunho-J/codex-troller, ask me the required confirmations first, then install and configure codex-troller end-to-end.
+https://github.com/Eunho-J/codex-troller の README-LLM.md を読み、codex-troller が何をするものか、なぜ必要か、ワークフローがどう動くかをわかりやすく説明してください。
+```
+
+インストールプロンプト:
+
+```text
+https://github.com/Eunho-J/codex-troller の README-LLM.md を読み、まず必須確認事項を私に質問したうえで、codex-troller のインストールと設定を最後まで実行してください。
 ```
 
 ## プロジェクト概要

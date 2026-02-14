@@ -8,9 +8,17 @@ Human guides:
 - [日本語](README.ja.md)
 - [中文](README.zh.md)
 
-If you prefer, ask your LLM agent to explain this project and install it for you.
+We recommend delegating both project explanation and installation to your LLM agent.
 
-Copy/paste this one-line prompt:
+Use the prompts below.
+
+Explanation prompt:
+
+```text
+Read README-LLM.md in https://github.com/Eunho-J/codex-troller and explain what codex-troller does, why it exists, and how the workflow works in plain language.
+```
+
+Installation prompt:
 
 ```text
 Read README-LLM.md in https://github.com/Eunho-J/codex-troller, ask me the required confirmations first, then install and configure codex-troller end-to-end.

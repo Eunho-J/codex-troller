@@ -2,8 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-GO_VERSION="${CODEX_MCP_GO_VERSION:-1.24.0}"
-TARGET_DIR="$ROOT_DIR/.codex-mcp/.tools"
+GO_VERSION="${CODEX_MCP_GO_VERSION:-$(awk '/^go /{print $2; exit}' "$ROOT_DIR/go.mod")}"
+if [ -n "${CODEX_MCP_GO_TARGET_DIR:-}" ]; then
+  TARGET_DIR="$CODEX_MCP_GO_TARGET_DIR"
+elif [ -n "${CODEX_HOME:-}" ]; then
+  TARGET_DIR="$CODEX_HOME/.codex-troller/deps"
+else
+  TARGET_DIR="$ROOT_DIR/.codex-mcp/.tools"
+fi
 GO_ROOT="$TARGET_DIR/go"
 
 normalize_version() {

@@ -63,6 +63,7 @@ Before running any install command, ask the user and wait for explicit answers.
 - For commands that may require elevated privileges, request execution approval first.
 - After approval, run the command and report result briefly.
 - If approval is denied, ask whether to skip or retry with a different method.
+- Install toolchain/runtime dependencies inside `<CODEX_HOME>/.codex-troller/deps` by default (Go, Node, Playwright assets).
 
 Recommended expertise-question style (ask in user's language):
 
@@ -145,10 +146,10 @@ After confirmations are complete, run commands one by one:
 
 1. Prerequisite checks
 ```bash
-command -v go
 command -v cp
 command -v awk
 command -v rm
+command -v tar
 ```
 
 2. Choose install scope and paths
@@ -161,9 +162,13 @@ export CODEX_HOME="$HOME/.codex"
 export CONFIG_PATH="$CODEX_HOME/config.toml"
 export STATE_DIR="$CODEX_HOME/.codex-troller"
 export BIN_DIR="$STATE_DIR/bin"
+export DEPS_DIR="$STATE_DIR/deps"
 export MCP_BIN_PATH="$BIN_DIR/codex-mcp"
 export PROFILE_PATH="$STATE_DIR/default_user_profile.json"
 export LAUNCHER_PATH="$BIN_DIR/codex-troller-launch"
+export CACHE_DIR="$STATE_DIR/cache"
+export NPM_CACHE_DIR="$DEPS_DIR/npm-cache"
+export PLAYWRIGHT_BROWSERS_DIR="$DEPS_DIR/playwright-browsers"
 ```
 
 3. Create temp fetch directory
@@ -190,23 +195,91 @@ fi
 
 5. Prepare target directories
 ```bash
-mkdir -p "$STATE_DIR" "$BIN_DIR" "$CODEX_HOME/skills" "$(dirname "$CONFIG_PATH")"
+mkdir -p "$STATE_DIR" "$BIN_DIR" "$DEPS_DIR" "$CACHE_DIR" "$NPM_CACHE_DIR" "$PLAYWRIGHT_BROWSERS_DIR" "$CODEX_HOME/skills" "$(dirname "$CONFIG_PATH")"
 touch "$CONFIG_PATH"
 ```
 
-6. Build binary + run tests from fetched source
+6. Install/reuse local Go toolchain inside state directory
 ```bash
-(cd "$SRC_DIR" && go build -o "$MCP_BIN_PATH" ./cmd/codex-mcp)
-(cd "$SRC_DIR" && go test ./...)
+export GO_VERSION="$(awk '/^go /{print $2; exit}' "$SRC_DIR/go.mod")"
+export GO_ROOT="$DEPS_DIR/go"
+export GO_BIN="$GO_ROOT/bin/go"
+
+if [ ! -x "$GO_BIN" ]; then
+  OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  ARCH="$(uname -m)"
+  case "$ARCH" in
+    x86_64) ARCH="amd64" ;;
+    arm64|aarch64) ARCH="arm64" ;;
+    *) echo "unsupported architecture: $ARCH" >&2; exit 1 ;;
+  esac
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.${OS}-${ARCH}.tar.gz" -o "$FETCH_DIR/go.tar.gz"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$FETCH_DIR/go.tar.gz" "https://go.dev/dl/go${GO_VERSION}.${OS}-${ARCH}.tar.gz"
+  else
+    echo "curl or wget is required to install local Go toolchain" >&2
+    exit 1
+  fi
+
+  rm -rf "$GO_ROOT"
+  tar -C "$DEPS_DIR" -xzf "$FETCH_DIR/go.tar.gz"
+fi
+
+"$GO_BIN" version
 ```
 
-7. Install skill files from fetched source
+7. Install/reuse local Node.js toolchain inside state directory
+```bash
+export NODE_VERSION="${NODE_VERSION:-22.13.1}"
+export NODE_ROOT="$DEPS_DIR/node"
+export NODE_BIN_DIR="$NODE_ROOT/bin"
+export NPX_BIN="$NODE_BIN_DIR/npx"
+
+if [ ! -x "$NPX_BIN" ]; then
+  OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  ARCH="$(uname -m)"
+  case "$ARCH" in
+    x86_64) ARCH="x64" ;;
+    arm64|aarch64) ARCH="arm64" ;;
+    *) echo "unsupported architecture: $ARCH" >&2; exit 1 ;;
+  esac
+  case "$OS" in
+    linux|darwin) ;;
+    *) echo "unsupported OS for local Node bootstrap: $OS" >&2; exit 1 ;;
+  esac
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-${OS}-${ARCH}.tar.gz" -o "$FETCH_DIR/node.tar.gz"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$FETCH_DIR/node.tar.gz" "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-${OS}-${ARCH}.tar.gz"
+  else
+    echo "curl or wget is required to install local Node.js toolchain" >&2
+    exit 1
+  fi
+
+  rm -rf "$NODE_ROOT"
+  mkdir -p "$NODE_ROOT"
+  tar -C "$NODE_ROOT" --strip-components=1 -xzf "$FETCH_DIR/node.tar.gz"
+fi
+
+"$NPX_BIN" --version
+```
+
+8. Build binary + run tests from fetched source (using local Go)
+```bash
+(cd "$SRC_DIR" && "$GO_BIN" build -o "$MCP_BIN_PATH" ./cmd/codex-mcp)
+(cd "$SRC_DIR" && "$GO_BIN" test ./...)
+```
+
+9. Install skill files from fetched source
 ```bash
 rm -rf "$CODEX_HOME/skills/codex-troller-autostart"
 cp -R "$SRC_DIR/skills/codex-troller-autostart" "$CODEX_HOME/skills/codex-troller-autostart"
 ```
 
-8. Write profile from interview answers
+10. Write profile from interview answers
 ```bash
 # Replace values below with captured interview answers.
 export PROFILE_OVERALL="intermediate"
@@ -224,7 +297,7 @@ cat > "$PROFILE_PATH" <<EOF
 EOF
 ```
 
-9. Write launcher
+11. Write launcher
 ```bash
 cat > "$LAUNCHER_PATH" <<EOF
 #!/usr/bin/env bash
@@ -235,36 +308,44 @@ EOF
 chmod +x "$LAUNCHER_PATH"
 ```
 
-10. Register MCP server in config (idempotent section replace)
+12. Register MCP server in config (idempotent section replace)
 ```bash
 awk -v sec='[mcp_servers.codex-troller]' 'BEGIN{skip=0} $0==sec{skip=1;next} skip&&$0~/^\[/{skip=0} !skip{print}' "$CONFIG_PATH" > "$CONFIG_PATH.tmp" && mv "$CONFIG_PATH.tmp" "$CONFIG_PATH"
 printf '\n[mcp_servers.codex-troller]\ncommand = "%s"\n' "$LAUNCHER_PATH" >> "$CONFIG_PATH"
 ```
 
-11. If Playwright selected: register MCP + install dependencies command-by-command
+13. If Playwright selected: register MCP + install dependencies command-by-command
 ```bash
-command -v npx
 awk -v sec='[mcp_servers.playwright]' 'BEGIN{skip=0} $0==sec{skip=1;next} skip&&$0~/^\[/{skip=0} !skip{print}' "$CONFIG_PATH" > "$CONFIG_PATH.tmp" && mv "$CONFIG_PATH.tmp" "$CONFIG_PATH"
-printf '\n[mcp_servers.playwright]\ncommand = "npx"\nargs = ["-y", "@playwright/mcp@latest"]\n' >> "$CONFIG_PATH"
+cat > "$BIN_DIR/playwright-mcp-launch" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export npm_config_cache="$NPM_CACHE_DIR"
+export XDG_CACHE_HOME="$CACHE_DIR"
+export PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR"
+exec "$NPX_BIN" -y @playwright/mcp@latest
+EOF
+chmod +x "$BIN_DIR/playwright-mcp-launch"
+printf '\n[mcp_servers.playwright]\ncommand = "%s"\n' "$BIN_DIR/playwright-mcp-launch" >> "$CONFIG_PATH"
 ```
 - Linux: request permission, then run:
 ```bash
-npx -y playwright@latest install --with-deps chromium firefox webkit
+npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y playwright@latest install --with-deps chromium firefox webkit
 ```
 - If denied or failed, run:
 ```bash
-npx -y playwright@latest install chromium firefox webkit
+npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y playwright@latest install chromium firefox webkit
 ```
 - Verify runtime:
 ```bash
-npx -y -p playwright node -e "const { chromium } = require('playwright'); (async()=>{ const b=await chromium.launch({headless:true}); await b.close(); })();"
+npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y -p playwright node -e "const { chromium } = require('playwright'); (async()=>{ const b=await chromium.launch({headless:true}); await b.close(); })();"
 ```
 - If verify fails, ask user:
   1) retry dependency install, or
   2) skip Playwright.
   Then execute choice and re-verify. Repeat until success or explicit skip.
 
-12. Write consent log
+14. Write consent log
 ```bash
 export PLAYWRIGHT_MCP_VALUE="yes"   # or "no"
 cat > "$STATE_DIR/install-consent.log" <<EOF
@@ -281,8 +362,10 @@ profile_path: $PROFILE_PATH
 EOF
 ```
 
-13. Verify installation (no shell wrapper)
+15. Verify installation (no shell wrapper)
 ```bash
+test -x "$GO_BIN"
+test -x "$NPX_BIN"
 test -x "$MCP_BIN_PATH"
 test -x "$LAUNCHER_PATH"
 test -f "$CODEX_HOME/skills/codex-troller-autostart/SKILL.md"
@@ -290,13 +373,16 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | "$MCP_BIN_PATH"
 echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | "$MCP_BIN_PATH"
 ```
 
-14. Clean fetched files/folders
+16. Clean fetched files/folders
 ```bash
 rm -rf "$FETCH_DIR"
 ```
 
 ## Verification Checklist
 
+- `<CODEX_HOME>/.codex-troller/deps/go/bin/go` exists
+- `<CODEX_HOME>/.codex-troller/deps/node/bin/npx` exists
+- If Playwright selected: `<CODEX_HOME>/.codex-troller/deps/playwright-browsers` has browser files
 - `<CODEX_HOME>/.codex-troller/bin/codex-mcp` exists
 - `<CODEX_HOME>/.codex-troller/bin/codex-troller-launch` exists
 - Codex config has `[mcp_servers.codex-troller]`

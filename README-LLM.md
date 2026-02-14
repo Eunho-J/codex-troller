@@ -26,12 +26,12 @@ Its purpose is to increase reliability by turning ambiguous user intent into a s
 - persistent resumability.
 
 Mode routing is split into two installed skills:
-- `codex-troller-mode-router`: always checks `on/off` mode before routing work.
+- `troller-router`: always checks `on/off` mode before routing work.
 - `troller`: runs the codex-troller workflow when mode is `on`.
 
 ## Mode Routing Policy (mandatory)
 
-- Install both skills (`mode-router` + `troller`).
+- Install both skills (`troller-router` + `troller`).
 - Update AGENTS rules for the chosen install scope:
   - global install -> `~/.codex/AGENTS.md`
   - local install -> `<repo>/AGENTS.md`
@@ -328,8 +328,9 @@ PATH="$NODE_BIN_DIR:$PATH" "$NPX_BIN" --version
 
 9. Install skill files from fetched source
 ```bash
-rm -rf "$CODEX_HOME/skills/codex-troller-mode-router"
-cp -R "$SRC_DIR/skills/codex-troller-mode-router" "$CODEX_HOME/skills/codex-troller-mode-router"
+rm -rf "$CODEX_HOME/skills/codex-troller-mode-router"  # migration cleanup (old name)
+rm -rf "$CODEX_HOME/skills/troller-router"
+cp -R "$SRC_DIR/skills/troller-router" "$CODEX_HOME/skills/troller-router"
 rm -rf "$CODEX_HOME/skills/troller"
 cp -R "$SRC_DIR/skills/troller" "$CODEX_HOME/skills/troller"
 ```
@@ -349,19 +350,21 @@ awk '
 BEGIN{skip=0}
 $0=="# >>> codex-troller-mode-router >>>"{skip=1;next}
 $0=="# <<< codex-troller-mode-router <<<"{skip=0;next}
+$0=="# >>> troller-router >>>"{skip=1;next}
+$0=="# <<< troller-router <<<"{skip=0;next}
 skip==0{print}
 ' "$AGENTS_PATH" > "$AGENTS_PATH.tmp" && mv "$AGENTS_PATH.tmp" "$AGENTS_PATH"
 
 cat >> "$AGENTS_PATH" <<'EOF'
 
-# >>> codex-troller-mode-router >>>
+# >>> troller-router >>>
 1. For any actionable user request, call `autostart_get_mode` first.
 2. If mode is `on`, continue codex-troller workflow and follow `get_session_status.next` strictly.
 3. If mode is `off`, use default Codex behavior unless user explicitly asks to enable/start codex-troller.
 4. On explicit enable/start request, call `autostart_set_mode` with `mode="on"` and continue workflow.
 5. On explicit disable/off request, call `autostart_set_mode` with `mode="off"` and return to default behavior.
 6. Consultant/manager roles must never implement directly; only worker roles can execute `run_action`.
-# <<< codex-troller-mode-router <<<
+# <<< troller-router <<<
 EOF
 ```
 
@@ -458,10 +461,10 @@ test -x "$NODE_BIN"
 test -x "$NPM_BIN"
 test -x "$NPX_BIN"
 test -x "$MCP_BIN_PATH"
-test -f "$CODEX_HOME/skills/codex-troller-mode-router/SKILL.md"
+test -f "$CODEX_HOME/skills/troller-router/SKILL.md"
 test -f "$CODEX_HOME/skills/troller/SKILL.md"
 test -f "$AGENTS_PATH"
-grep -Fq '# >>> codex-troller-mode-router >>>' "$AGENTS_PATH"
+grep -Fq '# >>> troller-router >>>' "$AGENTS_PATH"
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | "$MCP_BIN_PATH"
 echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | "$MCP_BIN_PATH"
 MCP_LIST_OUTPUT="$(CODEX_HOME="$CODEX_HOME" codex mcp list)"
@@ -485,7 +488,7 @@ rm -rf "$FETCH_DIR"
 - `<CODEX_HOME>/.codex-troller/bin/codex-mcp` exists
 - Codex config has `[mcp_servers.codex-troller]`
 - If requested, config also has `[mcp_servers.playwright]`
-- Skill exists at `<CODEX_HOME>/skills/codex-troller-mode-router/SKILL.md`
+- Skill exists at `<CODEX_HOME>/skills/troller-router/SKILL.md`
 - Skill exists at `<CODEX_HOME>/skills/troller/SKILL.md`
 - AGENTS mode-routing block exists in selected scope AGENTS file (`~/.codex/AGENTS.md` for global or `<repo>/AGENTS.md` for local)
 - `initialize` and `tools/list` JSON-RPC calls succeed via `<CODEX_HOME>/.codex-troller/bin/codex-mcp`

@@ -1,17 +1,17 @@
 ---
-name: codex-troller-mode-router
+name: troller-router
 description: Check how user work requests should be handled first, then route to codex-troller workflow only when mode is on
 argument-hint: "[user request]"
 ---
 
-# codex-troller-mode-router
+# troller-router
 
 Purpose: keep codex-troller behavior switchable (`on/off`) without forcing every request into the workflow.
 
 ## Trigger
 
 - Any user request that asks the assistant to do work.
-- Explicit mode command such as `$troller on/off` or `$codex-troller-mode-router on/off`.
+- Explicit mode command such as `$troller on/off` or `$troller-router on/off`.
 
 ## Required Behavior
 

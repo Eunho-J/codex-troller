@@ -353,7 +353,7 @@ printf '\n[mcp_servers.playwright]\ncommand = "%s"\n' "$BIN_DIR/playwright-mcp-l
 ```bash
 PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y playwright@latest install chromium firefox webkit
 ```
-- Verify runtime:
+- Optional diagnostics (recommended when the user wants immediate browser-run validation in this environment):
 ```bash
 PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y -p playwright node -e "const { chromium } = require('playwright'); (async()=>{ const b=await chromium.launch({headless:true, args:['--no-sandbox','--disable-setuid-sandbox']}); await b.close(); })();"
 ```
@@ -368,16 +368,15 @@ fi
 PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPM_BIN" install --no-audit --no-fund --save-dev playwright@latest
 PATH="$NODE_BIN_DIR:$PATH" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NODE_BIN" -e "const { chromium } = require('playwright'); (async()=>{ const b=await chromium.launch({headless:true, args:['--no-sandbox','--disable-setuid-sandbox']}); await b.close(); })();"
 ```
-- If verification reports missing Linux shared libraries, ask user to run apt commands directly (do not run `sudo apt*` automatically):
+- If diagnostics report missing Linux shared libraries, ask user to run apt commands directly (do not run `sudo apt*` automatically):
 ```bash
 sudo apt-get update
 sudo env "PATH=$NODE_BIN_DIR:$PATH" "$NPX_BIN" -y playwright@latest install-deps chromium firefox webkit
 ```
-- After user confirms apt step is done, rerun runtime verification.
-- If verification still fails, ask user:
-  1) retry apt dependency step, or
-  2) skip Playwright.
-  Repeat until success or explicit skip.
+- After user confirms apt step is done, rerun diagnostics.
+- If diagnostics still fail, continue installation with a warning note:
+  - registration/config is complete,
+  - runtime browser launch may still require host environment fixes.
 
 13. Write consent log
 ```bash
@@ -406,6 +405,11 @@ test -x "$MCP_BIN_PATH"
 test -f "$CODEX_HOME/skills/codex-troller-autostart/SKILL.md"
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | "$MCP_BIN_PATH"
 echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | "$MCP_BIN_PATH"
+MCP_LIST_OUTPUT="$(CODEX_HOME="$CODEX_HOME" codex mcp list)"
+echo "$MCP_LIST_OUTPUT" | grep -Eq '^codex-troller[[:space:]]'
+if [ "$PLAYWRIGHT_MCP_VALUE" = "yes" ]; then
+  echo "$MCP_LIST_OUTPUT" | grep -Eq '^playwright[[:space:]]'
+fi
 ```
 
 15. Clean fetched files/folders
@@ -423,6 +427,7 @@ rm -rf "$FETCH_DIR"
 - If requested, config also has `[mcp_servers.playwright]`
 - Skill exists at `<CODEX_HOME>/skills/codex-troller-autostart/SKILL.md`
 - `initialize` and `tools/list` JSON-RPC calls succeed via `<CODEX_HOME>/.codex-troller/bin/codex-mcp`
+- `CODEX_HOME="<target>" codex mcp list` includes `codex-troller` (and `playwright` when selected)
 
 ## Failure Handling
 
@@ -431,6 +436,7 @@ If any step fails:
 - fix and retry automatically,
 - ask user only when a permission/risk decision is required.
 - for Linux apt OS dependencies, explicitly ask the user to run the required apt commands and confirm completion before retry.
+- if Playwright optional diagnostics fail but MCP registration/integration checks pass, finish install with warning instead of marking overall install failed.
 
 ## Completion Message Policy (mandatory)
 

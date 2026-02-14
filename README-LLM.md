@@ -146,6 +146,7 @@ Use the following confirmation content in the user's language (semantic equivale
      - It is useful for web projects, E2E checks, and visual flow testing.
      - If selected, agent will run Playwright dependency installation commands step by step.
      - On Linux, OS-level dependency installation may require apt with sudo, which the user may need to run directly.
+     - Use bundled Playwright browsers by default (avoid system Chrome channel dependency).
    - Ask with numbered options:
      - `1)` install/register Playwright MCP
      - `2)` skip Playwright MCP
@@ -351,7 +352,7 @@ set -euo pipefail
 export npm_config_cache="$NPM_CACHE_DIR"
 export XDG_CACHE_HOME="$CACHE_DIR"
 export PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR"
-exec "$NPX_BIN" -y @playwright/mcp@latest
+exec "$NPX_BIN" -y @playwright/mcp@latest --browser firefox --headless --no-sandbox
 EOF
 chmod +x "$BIN_DIR/playwright-mcp-launch"
 printf '\n[mcp_servers.playwright]\ncommand = "%s"\n' "$BIN_DIR/playwright-mcp-launch" >> "$CONFIG_PATH"
@@ -362,7 +363,7 @@ PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CA
 ```
 - Optional diagnostics (recommended when the user wants immediate browser-run validation in this environment):
 ```bash
-PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y -p playwright node -e "const { chromium } = require('playwright'); (async()=>{ const b=await chromium.launch({headless:true, args:['--no-sandbox','--disable-setuid-sandbox']}); await b.close(); })();"
+PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPX_BIN" -y -p playwright node -e "const { firefox } = require('playwright'); (async()=>{ const b=await firefox.launch({headless:true}); await b.close(); })();"
 ```
 - If that fails due module-resolution issues in this environment, use deterministic local verify fallback:
 ```bash
@@ -373,7 +374,7 @@ if [ ! -f package.json ]; then
   PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" "$NPM_BIN" init -y
 fi
 PATH="$NODE_BIN_DIR:$PATH" npm_config_cache="$NPM_CACHE_DIR" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NPM_BIN" install --no-audit --no-fund --save-dev playwright@latest
-PATH="$NODE_BIN_DIR:$PATH" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NODE_BIN" -e "const { chromium } = require('playwright'); (async()=>{ const b=await chromium.launch({headless:true, args:['--no-sandbox','--disable-setuid-sandbox']}); await b.close(); })();"
+PATH="$NODE_BIN_DIR:$PATH" XDG_CACHE_HOME="$CACHE_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" "$NODE_BIN" -e "const { firefox } = require('playwright'); (async()=>{ const b=await firefox.launch({headless:true}); await b.close(); })();"
 ```
 - If diagnostics report missing Linux shared libraries, ask user to run apt commands directly (do not run `sudo apt*` automatically):
 ```bash

@@ -21,7 +21,7 @@ https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md を最新状態
 インストールプロンプト:
 
 ```text
-https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md を最新状態として読んでください。ネットワーク権限がない場合は、先に私へアクセス許可を求めてください。その後、現在の会話言語（日本語）で必須確認事項を質問し、最新の GitHub リポジトリ基準で codex-troller のインストールと設定を最後まで実行してください。
+https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md を最新状態として読んでください。ネットワーク権限がない場合は、先に私へアクセス許可を求めてください。その後、現在の会話言語（日本語）で必須確認事項を質問し、最新の GitHub リポジトリ基準で codex-troller のインストールと設定を最後まで実行してください。Playwright MCP はシステム Chrome チャネルに依存せず、バンドルブラウザ（firefox）モードで設定してください。
 ```
 
 ## プロジェクト概要

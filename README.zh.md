@@ -21,7 +21,7 @@
 安装提示词:
 
 ```text
-请将 https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md 作为最新版本读取。如果网络权限受限，请先向我请求网络访问许可。然后使用当前对话语言（中文）先向我确认必需确认项，并基于最新 GitHub 仓库把 codex-troller 的安装与配置完整执行到结束。
+请将 https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md 作为最新版本读取。如果网络权限受限，请先向我请求网络访问许可。然后使用当前对话语言（中文）先向我确认必需确认项，并基于最新 GitHub 仓库把 codex-troller 的安装与配置完整执行到结束。对于 Playwright MCP，请使用内置浏览器（firefox）模式，不要依赖系统 Chrome 通道。
 ```
 
 ## 项目概览

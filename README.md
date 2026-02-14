@@ -21,7 +21,7 @@ Read https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md as the lat
 Installation prompt:
 
 ```text
-Read https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md as the latest version. If internet access is blocked, ask me to approve network access first. Then ask required confirmations in the same language I am using in this chat and install/configure codex-troller end-to-end using the latest GitHub repository.
+Read https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md as the latest version. If internet access is blocked, ask me to approve network access first. Then ask required confirmations in the same language I am using in this chat and install/configure codex-troller end-to-end using the latest GitHub repository. For Playwright MCP, configure bundled-browser mode (firefox) and do not rely on system Chrome channel.
 ```
 
 ## What This Project Is

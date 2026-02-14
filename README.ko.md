@@ -21,7 +21,7 @@ https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md 를 최신 상�
 설치 프롬프트:
 
 ```text
-https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md 를 최신 상태 기준으로 읽어줘. 인터넷 권한이 막혀 있으면 먼저 나에게 네트워크 접근 승인을 요청해줘. 그 다음 지금 대화 언어(한국어)로 필수 확인 항목을 질문하고, 최신 GitHub 레포지토리 기준으로 codex-troller 설치/설정을 끝까지 진행해줘.
+https://github.com/Eunho-J/codex-troller/blob/main/README-LLM.md 를 최신 상태 기준으로 읽어줘. 인터넷 권한이 막혀 있으면 먼저 나에게 네트워크 접근 승인을 요청해줘. 그 다음 지금 대화 언어(한국어)로 필수 확인 항목을 질문하고, 최신 GitHub 레포지토리 기준으로 codex-troller 설치/설정을 끝까지 진행해줘. Playwright MCP는 시스템 Chrome 채널에 의존하지 말고 번들 브라우저(firefox) 모드로 설정해줘.
 ```
 
 ## 프로젝트 개요

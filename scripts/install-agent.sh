@@ -179,9 +179,6 @@ SKILL_DST="$CODEX_HOME_PATH/skills/codex-troller-autostart"
 PROFILE_PATH="${CODEX_TROLLER_PROFILE_PATH:-$CODEX_HOME_PATH/$STATE_DIR_NAME/default_user_profile.json}"
 
 echo "[agent-install] scope: $INSTALL_SCOPE"
-echo "[agent-install] codex_home: $CODEX_HOME_PATH"
-echo "[agent-install] config: $CONFIG_PATH"
-echo "[agent-install] profile: $PROFILE_PATH"
 
 if [[ "$NON_INTERACTIVE" != "1" ]]; then
   PLAYWRIGHT_CONSENT="$(prompt_yes_no "Install Playwright MCP integration now? [yes/no] (default: no):" "no")"
@@ -361,7 +358,8 @@ if [[ "$PLAYWRIGHT_CONSENT" == "yes" ]]; then
   echo "[agent-install] registered mcp_servers.playwright"
 fi
 echo "[agent-install] installed skill: codex-troller-autostart"
-echo "[agent-install] wrote default user profile: $PROFILE_PATH"
 if [[ "$INSTALL_SCOPE" == "local" ]]; then
-  echo "[agent-install] local scope selected. Run Codex with CODEX_HOME=\"$CODEX_HOME_PATH\" to use this local installation."
+  echo "[agent-install] next: restart Codex in this folder."
+else
+  echo "[agent-install] next: restart Codex. It will be available from any folder."
 fi

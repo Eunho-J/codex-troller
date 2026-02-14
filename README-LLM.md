@@ -51,6 +51,10 @@ Before running any install command, ask the user and wait for explicit answers.
 - For optional free-text fields, provide numbered branching first:
   - `1) none`
   - `2) I will enter details`
+- For optional integrations/tools, explain value first in 1-2 short sentences:
+  - what it enables,
+  - when it is useful.
+- Then present numbered options and ask for a number.
 
 Recommended expertise-question style (ask in user's language):
 
@@ -70,10 +74,21 @@ Recommended expertise-question style (ask in user's language):
      - `2)` balanced summary + key reason
      - `3)` technical details and implications
 4. `domain_knowledge` mapping
+   - Before asking, explain briefly in the user's language:
+     - Domain hints tell the system where the user has stronger/weaker familiarity.
+     - This controls where to ask more detail vs where to move faster with less explanation.
    - Ask: "Do you want to provide domain hints now?"
      - `1)` no hints
      - `2)` yes, I will enter comma-separated hints
    - If `2`, ask for hints in user's language with short examples.
+   - Example hint categories (translate for user):
+     - `frontend`, `backend`, `db`, `security`, `infra`, `ai_ml`, `asset`, `game`
+   - Example input:
+     - `frontend,testing`
+     - `backend,security,db`
+   - Optional level form:
+     - `backend=advanced,frontend=beginner`
+   - Keep prompt short and practical; avoid internal schema details.
 
 Use the following confirmation content in the user's language (semantic equivalent, not fixed English wording):
 
@@ -89,9 +104,16 @@ Use the following confirmation content in the user's language (semantic equivale
      - `1)` global (`~/.codex`)
      - `2)` local (`<repo>/.codex`)
 3. Optional Playwright MCP
+   - Before asking, briefly explain in the user's language:
+     - It enables browser automation and UI verification.
+     - It is useful for web projects, E2E checks, and visual flow testing.
    - Ask with numbered options:
      - `1)` install/register Playwright MCP
      - `2)` skip Playwright MCP
+   - Recommendation rule:
+     - If task includes web UI, browser interactions, E2E, or visual review -> recommend `1`.
+     - Otherwise -> recommend `2`.
+   - Keep the explanation short; do not over-explain tooling internals.
 4. Initial expertise profile
    - Ask and capture (questions in user's language):
      - `overall` (`beginner|intermediate|advanced`)
@@ -167,9 +189,11 @@ If any step fails:
 - First line must state outcome in plain words (installed/not installed).
 - Next line must give exactly one immediate action.
   - Local install: "Restart Codex in this folder."
-  - Global install: "Restart Codex."
+  - Global install: "Restart Codex. It will be available from any folder."
 - Do not dump full paths/config blocks first.
 - Do not lead with MCP section names, binary paths, or profile JSON values.
+- Do not show `CODEX_HOME=...` guidance in default completion messaging.
+- Do not suggest cleanup/deletion of old directories unless the user asks.
 - Provide technical details only as an optional follow-up:
   - "If you want, I can show detailed paths/logs."
 

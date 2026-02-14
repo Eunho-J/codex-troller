@@ -39,27 +39,41 @@ Before running any install command, ask the user and wait for explicit answers.
 - Ask in user-goal language so the user can answer immediately without extra thinking.
 - Keep each question short, concrete, and action-oriented.
 - After each answer, silently map it to canonical values for installer input.
+- Prefer numeric responses for speed: present numbered options and ask user to reply with a number.
+- Option labels must be translated into the user's language (do not show English-only options to non-English users).
+
+## Input Format Policy (mandatory)
+
+- For each question, show numbered choices (`1`, `2`, `3`...) in the user's language.
+- Ask: "Reply with the number."
+- Accept both number and text answers, but normalize to canonical values internally.
+- If the user gives text, map it and continue without forcing re-entry.
+- For optional free-text fields, provide numbered branching first:
+  - `1) none`
+  - `2) I will enter details`
 
 Recommended expertise-question style (ask in user's language):
 
 1. `overall` mapping
-   - Ask: "For this setup, which style fits you best?"
-     - "I want simple guidance and safe defaults."
-     - "I can follow normal technical instructions."
-     - "I want detailed technical trade-offs."
+   - Ask: "Which guidance style do you want for this setup?"
+     - `1)` simple guidance + safe defaults
+     - `2)` normal technical guidance
+     - `3)` detailed technical trade-offs
 2. `response_need` mapping
-   - Ask: "During installation/work, how often should I check with you?"
-     - "Only when necessary."
-     - "Balanced checkpoints."
-     - "Frequent confirmations."
+   - Ask: "How often should I check with you during work?"
+     - `1)` only when necessary
+     - `2)` balanced checkpoints
+     - `3)` frequent confirmations
 3. `technical_depth` mapping
    - Ask: "How should I explain decisions?"
-     - "High-level outcomes."
-     - "Balanced summary + key reason."
-     - "Technical details and implications."
+     - `1)` high-level outcomes
+     - `2)` balanced summary + key reason
+     - `3)` technical details and implications
 4. `domain_knowledge` mapping
-   - Ask: "Which areas should I trust your direct judgment less, and ask you more explicitly?"
-   - Optional follow-up: "Any areas you know well where I can move faster with less explanation?"
+   - Ask: "Do you want to provide domain hints now?"
+     - `1)` no hints
+     - `2)` yes, I will enter comma-separated hints
+   - If `2`, ask for hints in user's language with short examples.
 
 Use the following confirmation content in the user's language (semantic equivalent, not fixed English wording):
 
@@ -67,11 +81,17 @@ Use the following confirmation content in the user's language (semantic equivale
    - software is not sufficiently validated
    - user assumes responsibility for issues/damages
    - GNU GPL v3.0 license acknowledged
-   - Ask for explicit agreement to all 3 terms (`yes/no`)
+   - Ask with numbered options:
+     - `1)` agree to all terms
+     - `2)` do not agree
 2. Install scope
-   - Ask install scope: `global` (`~/.codex`) or `local` (`<repo>/.codex`)
+   - Ask with numbered options:
+     - `1)` global (`~/.codex`)
+     - `2)` local (`<repo>/.codex`)
 3. Optional Playwright MCP
-   - Ask whether to register Playwright MCP (`@playwright/mcp`) (`yes/no`)
+   - Ask with numbered options:
+     - `1)` install/register Playwright MCP
+     - `2)` skip Playwright MCP
 4. Initial expertise profile
    - Ask and capture (questions in user's language):
      - `overall` (`beginner|intermediate|advanced`)

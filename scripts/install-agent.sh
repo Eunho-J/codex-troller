@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN_PATH="$ROOT_DIR/.codex-mcp/bin/codex-mcp"
 LAUNCHER_PATH="$ROOT_DIR/.codex-mcp/bin/codex-troller-launch"
 SKILL_SRC="$ROOT_DIR/skills/codex-troller-autostart"
+STATE_DIR_NAME=".codex-troller"
 
 NON_INTERACTIVE="${AGENT_INSTALL_NON_INTERACTIVE:-0}"
 INSTALL_SCOPE="${INSTALL_SCOPE:-}"
@@ -175,7 +176,7 @@ fi
 CODEX_HOME_PATH="${CODEX_HOME_PATH:-$CODEX_HOME_DEFAULT}"
 CONFIG_PATH="${CODEX_CONFIG_PATH:-$CODEX_HOME_PATH/config.toml}"
 SKILL_DST="$CODEX_HOME_PATH/skills/codex-troller-autostart"
-PROFILE_PATH="${CODEX_TROLLER_PROFILE_PATH:-$CODEX_HOME_PATH/codex-troller/default_user_profile.json}"
+PROFILE_PATH="${CODEX_TROLLER_PROFILE_PATH:-$CODEX_HOME_PATH/$STATE_DIR_NAME/default_user_profile.json}"
 
 echo "[agent-install] scope: $INSTALL_SCOPE"
 echo "[agent-install] codex_home: $CODEX_HOME_PATH"
@@ -339,7 +340,7 @@ mkdir -p "$(dirname "$SKILL_DST")"
 rm -rf "$SKILL_DST"
 cp -R "$SKILL_SRC" "$SKILL_DST"
 
-CONSENT_LOG="$CODEX_HOME_PATH/codex-troller/install-consent.log"
+CONSENT_LOG="$CODEX_HOME_PATH/$STATE_DIR_NAME/install-consent.log"
 mkdir -p "$(dirname "$CONSENT_LOG")"
 {
   echo "timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"

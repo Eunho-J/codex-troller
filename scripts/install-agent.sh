@@ -176,7 +176,16 @@ fi
 CODEX_HOME_PATH="${CODEX_HOME_PATH:-$CODEX_HOME_DEFAULT}"
 CONFIG_PATH="${CODEX_CONFIG_PATH:-$CODEX_HOME_PATH/config.toml}"
 SKILL_DST="$CODEX_HOME_PATH/skills/codex-troller-autostart"
-PROFILE_PATH="${CODEX_TROLLER_PROFILE_PATH:-$CODEX_HOME_PATH/$STATE_DIR_NAME/default_user_profile.json}"
+STATE_DIR="$CODEX_HOME_PATH/$STATE_DIR_NAME"
+LEGACY_STATE_DIR="$CODEX_HOME_PATH/codex-troller"
+DEFAULT_PROFILE_PATH="$STATE_DIR/default_user_profile.json"
+LEGACY_PROFILE_PATH="$LEGACY_STATE_DIR/default_user_profile.json"
+PROFILE_PATH="${CODEX_TROLLER_PROFILE_PATH:-$DEFAULT_PROFILE_PATH}"
+
+# Normalize legacy profile path to hidden-state default.
+if [[ "$PROFILE_PATH" == "$LEGACY_PROFILE_PATH" ]]; then
+  PROFILE_PATH="$DEFAULT_PROFILE_PATH"
+fi
 
 echo "[agent-install] scope: $INSTALL_SCOPE"
 
@@ -210,6 +219,20 @@ if [[ "$PLAYWRIGHT_CONSENT" == "yes" ]]; then
       exit 1
     fi
   fi
+fi
+
+# Migrate legacy non-hidden state directory if it exists.
+if [[ -d "$LEGACY_STATE_DIR" && "$LEGACY_STATE_DIR" != "$STATE_DIR" ]]; then
+  mkdir -p "$STATE_DIR"
+  shopt -s dotglob nullglob
+  for entry in "$LEGACY_STATE_DIR"/*; do
+    base="$(basename "$entry")"
+    if [[ ! -e "$STATE_DIR/$base" ]]; then
+      mv "$entry" "$STATE_DIR/$base"
+    fi
+  done
+  shopt -u dotglob nullglob
+  rmdir "$LEGACY_STATE_DIR" 2>/dev/null || true
 fi
 
 mkdir -p "$(dirname "$CONFIG_PATH")"
@@ -355,7 +378,7 @@ mkdir -p "$(dirname "$SKILL_DST")"
 rm -rf "$SKILL_DST"
 cp -R "$SKILL_SRC" "$SKILL_DST"
 
-CONSENT_LOG="$CODEX_HOME_PATH/$STATE_DIR_NAME/install-consent.log"
+CONSENT_LOG="$STATE_DIR/install-consent.log"
 mkdir -p "$(dirname "$CONSENT_LOG")"
 {
   echo "timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"

@@ -32,6 +32,35 @@ Before running any install command, ask the user and wait for explicit answers.
 - If an answer is ambiguous, ask a short follow-up for that single item.
 - Do not proceed to installation until all required items are confirmed.
 
+## Question Style Policy (mandatory)
+
+- Do not ask with raw field names like `overall`, `response_need`, `technical_depth`, `domain_knowledge`.
+- Do not ask with enum-only forms like "choose beginner/intermediate/advanced" without context.
+- Ask in user-goal language so the user can answer immediately without extra thinking.
+- Keep each question short, concrete, and action-oriented.
+- After each answer, silently map it to canonical values for installer input.
+
+Recommended expertise-question style (ask in user's language):
+
+1. `overall` mapping
+   - Ask: "For this setup, which style fits you best?"
+     - "I want simple guidance and safe defaults."
+     - "I can follow normal technical instructions."
+     - "I want detailed technical trade-offs."
+2. `response_need` mapping
+   - Ask: "During installation/work, how often should I check with you?"
+     - "Only when necessary."
+     - "Balanced checkpoints."
+     - "Frequent confirmations."
+3. `technical_depth` mapping
+   - Ask: "How should I explain decisions?"
+     - "High-level outcomes."
+     - "Balanced summary + key reason."
+     - "Technical details and implications."
+4. `domain_knowledge` mapping
+   - Ask: "Which areas should I trust your direct judgment less, and ask you more explicitly?"
+   - Optional follow-up: "Any areas you know well where I can move faster with less explanation?"
+
 Use the following confirmation content in the user's language (semantic equivalent, not fixed English wording):
 
 1. Terms consent
